@@ -4,6 +4,7 @@ import { Layout } from "./components/layout";
 import { Dashboard } from "./pages/Dashboard";
 import { Transactions } from "./pages/Transactions";
 import { ReviewPage } from "./pages/ReviewPage";
+import { Reconciliation } from "./pages/Reconciliation";
 import { useState } from "react";
 
 const queryClient = new QueryClient({
@@ -36,6 +37,8 @@ function AppContent() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/review" element={<ReviewPage />} />
+          <Route path="/reconciliation" element={<Reconciliation />} />
+          <Route path="/reconciliation/:statementId" element={<Reconciliation />} />
           <Route
             path="/companies"
             element={

@@ -20,12 +20,14 @@ def create_app(config_name='default'):
     from app.routes.dashboard import bp as dashboard_bp
     from app.routes.api import api_bp
     from app.routes.quickbooks import bp as quickbooks_bp
+    from app.routes.reconciliation import bp as reconciliation_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(api_bp)  # url_prefix already set in blueprint
     app.register_blueprint(quickbooks_bp, url_prefix='/quickbooks')
+    app.register_blueprint(reconciliation_bp, url_prefix='/api/v1')
     
     # Register catch-all route LAST (after all blueprints)
     from flask import send_from_directory

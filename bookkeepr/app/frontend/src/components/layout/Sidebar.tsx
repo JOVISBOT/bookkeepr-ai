@@ -7,12 +7,14 @@ import {
   Settings,
   Building2,
   Brain,
+  FileText,
 } from "lucide-react";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/transactions", icon: Receipt, label: "Transactions" },
   { to: "/review", icon: CheckCircle, label: "Review Queue" },
+  { to: "/reconciliation", icon: FileText, label: "Reconciliation" },
   { to: "/companies", icon: Building2, label: "Companies" },
   { to: "/ai", icon: Brain, label: "AI Settings" },
   { to: "/settings", icon: Settings, label: "Settings" },
