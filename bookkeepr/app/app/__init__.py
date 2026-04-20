@@ -14,7 +14,7 @@ def create_app(config_name='default'):
     # Initialize extensions
     init_extensions(app)
     
-    # Register blueprints
+    # Register blueprints FIRST (before catch-all route)
     from app.routes.main import bp as main_bp
     from app.routes.auth import bp as auth_bp
     from app.routes.dashboard import bp as dashboard_bp
@@ -27,7 +27,7 @@ def create_app(config_name='default'):
     app.register_blueprint(api_bp)  # url_prefix already set in blueprint
     app.register_blueprint(quickbooks_bp, url_prefix='/quickbooks')
     
-    # Serve React frontend
+    # Register catch-all route LAST (after all blueprints)
     from flask import send_from_directory
     import os
     
@@ -35,11 +35,13 @@ def create_app(config_name='default'):
     @app.route('/<path:path>')
     def serve_react(path):
         """Serve React app for all non-API routes"""
-        # API routes are handled by blueprints - don't intercept them
+        # Check if this path matches an API/blueprint route
+        # Flask tries blueprints first due to registration order,
+        # but we need to make sure we don't interfere
+        
+        # API routes are handled by blueprints - skip if matches api/auth/dashboard
         if path.startswith('api/') or path.startswith('auth/') or path.startswith('dashboard/'):
-            # Let Flask continue to try blueprint routes
-            from flask import abort
-            abort(404)
+            return "API route not found", 404
             
         frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
         

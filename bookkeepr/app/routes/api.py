@@ -723,3 +723,185 @@ def get_learned_rules(company_id):
     ).order_by(CategoryRule.match_count.desc()).all()
     
     return jsonify([r.to_dict() for r in rules])
+
+
+# ==================== BANK RECONCILIATION API ====================
+
+from app.models.bank_statement import BankStatement, BankStatementLine, ReconciliationMatch
+from app.services.reconciliation import get_reconciliation_service
+
+
+@api_bp.route('/companies/<int:company_id>/bank-statements', methods=['GET', 'POST'])
+@login_required
+def bank_statements(company_id):
+    """List or create bank statements"""
+    company = Company.query.get_or_404(company_id)
+    
+    if company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if request.method == 'GET':
+        statements = BankStatement.query.filter_by(company_id=company_id).order_by(BankStatement.upload_date.desc()).all()
+        return jsonify([s.to_dict() for s in statements])
+    
+    # POST - Create new statement
+    data = request.get_json()
+    
+    statement = BankStatement(
+        company_id=company_id,
+        file_name=data.get('file_name', 'import.csv'),
+        statement_date=datetime.strptime(data.get('statement_date'), '%Y-%m-%d').date() if data.get('statement_date') else None,
+        start_balance=data.get('start_balance', 0),
+        end_balance=data.get('end_balance', 0)
+    )
+    db.session.add(statement)
+    db.session.commit()
+    
+    return jsonify(statement.to_dict()), 201
+
+
+@api_bp.route('/bank-statements/<int:statement_id>/lines', methods=['GET', 'POST'])
+@login_required
+def bank_statement_lines(statement_id):
+    """Get lines or import lines from CSV"""
+    statement = BankStatement.query.get_or_404(statement_id)
+    
+    if statement.company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if request.method == 'GET':
+        lines = BankStatementLine.query.filter_by(statement_id=statement_id).all()
+        return jsonify([l.to_dict() for l in lines])
+    
+    # POST - Import lines
+    data = request.get_json()
+    lines_data = data.get('lines', [])
+    
+    for line_data in lines_data:
+        line = BankStatementLine(
+            statement_id=statement_id,
+            line_date=datetime.strptime(line_data['date'], '%Y-%m-%d').date(),
+            description=line_data.get('description', ''),
+            amount=line_data['amount'],
+            reference_number=line_data.get('reference', '')
+        )
+        db.session.add(line)
+    
+    db.session.commit()
+    return jsonify({'imported': len(lines_data)}), 201
+
+
+@api_bp.route('/companies/<int:company_id>/reconciliation/matches', methods=['GET'])
+@login_required
+def get_reconciliation_matches(company_id):
+    """Get all reconciliation matches for company"""
+    company = Company.query.get_or_404(company_id)
+    
+    if company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Filter by status
+    status = request.args.get('status', 'pending')
+    matches = ReconciliationMatch.query.filter_by(
+        company_id=company_id,
+        status=status
+    ).all()
+    
+    return jsonify([m.to_dict() for m in matches])
+
+
+@api_bp.route('/companies/<int:company_id>/reconciliation/auto-match', methods=['POST'])
+@login_required
+def auto_match_reconciliation(company_id):
+    """Auto-match bank lines with transactions"""
+    company = Company.query.get_or_404(company_id)
+    
+    if company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    statement_id = data.get('statement_id')
+    threshold = data.get('confidence_threshold', 0.85)
+    
+    service = get_reconciliation_service(company_id)
+    matched_count = service.auto_match_all(statement_id, threshold)
+    
+    return jsonify({
+        'matched': matched_count,
+        'statement_id': statement_id
+    })
+
+
+@api_bp.route('/reconciliation/matches/<int:match_id>/approve', methods=['POST'])
+@login_required
+def approve_match(match_id):
+    """Approve a reconciliation match"""
+    match = ReconciliationMatch.query.get_or_404(match_id)
+    
+    if match.company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    service = get_reconciliation_service(match.company_id)
+    success = service.approve_match(match_id, current_user.id)
+    
+    if success:
+        return jsonify({'success': True, 'message': 'Match approved'})
+    return jsonify({'error': 'Failed to approve match'}), 400
+
+
+@api_bp.route('/reconciliation/matches/<int:match_id>/reject', methods=['POST'])
+@login_required
+def reject_match(match_id):
+    """Reject a reconciliation match"""
+    match = ReconciliationMatch.query.get_or_404(match_id)
+    
+    if match.company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    service = get_reconciliation_service(match.company_id)
+    success = service.reject_match(match_id)
+    
+    if success:
+        return jsonify({'success': True, 'message': 'Match rejected'})
+    return jsonify({'error': 'Failed to reject match'}), 400
+
+
+@api_bp.route('/reconciliation/manual-match', methods=['POST'])
+@login_required
+def manual_match():
+    """Manually match a bank line to a transaction"""
+    data = request.get_json()
+    
+    bank_line_id = data.get('bank_line_id')
+    transaction_id = data.get('transaction_id')
+    
+    line = BankStatementLine.query.get_or_404(bank_line_id)
+    transaction = Transaction.query.get_or_404(transaction_id)
+    
+    if line.statement.company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if transaction.company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    service = get_reconciliation_service(line.statement.company_id)
+    success = service.manual_match(bank_line_id, transaction_id, current_user.id)
+    
+    if success:
+        return jsonify({'success': True, 'message': 'Manual match created'})
+    return jsonify({'error': 'Failed to create match'}), 400
+
+
+@api_bp.route('/bank-statements/<int:statement_id>/summary', methods=['GET'])
+@login_required
+def get_reconciliation_summary(statement_id):
+    """Get reconciliation summary for a statement"""
+    statement = BankStatement.query.get_or_404(statement_id)
+    
+    if statement.company.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    service = get_reconciliation_service(statement.company_id)
+    summary = service.get_reconciliation_summary(statement_id)
+    
+    return jsonify(summary)
