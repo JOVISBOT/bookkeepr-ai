@@ -1,0 +1,35 @@
+# BookKeepr AI - Render Deployment
+# Simplified requirements without QuickBooks (optional feature)
+
+# OpenAI for AI Categorization
+openai>=1.0.0
+
+# Flask Web Framework
+flask==3.0.3
+flask-sqlalchemy==3.1.1
+flask-migrate==4.0.7
+flask-login==0.6.3
+flask-wtf==1.2.1
+
+# Database
+psycopg2-binary==2.9.9
+
+# Environment & Config
+python-dotenv==1.0.1
+
+# HTTP Requests
+requests==2.31.0
+
+# Date/Time Handling
+python-dateutil==2.9.0
+
+# Validation
+pydantic==2.7.1
+email-validator==2.1.1
+
+# Production
+gunicorn==22.0.0
+sentry-sdk[flask]==2.1.1
+
+# Note: QuickBooks integration (intuit-oauth, python-quickbooks) 
+# requires manual setup due to strict version dependencies
