@@ -11,11 +11,11 @@ interface LayoutProps {
 
 export function Layout({ onSync, isSyncing }: LayoutProps) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <div className="flex-1 ml-64">
+      <div className="flex-1 lg:ml-64">
         <Header onSync={onSync} isSyncing={isSyncing} />
-        <main className="p-8">
+        <main className="p-4 lg:p-8">
           <Outlet />
         </main>
       </div>
