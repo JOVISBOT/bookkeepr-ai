@@ -3,7 +3,7 @@
 openai>=1.0.0
 
 # QuickBooks Integration
-intuit-oauth==1.2.6
+intuit-oauth==1.2.5
 python-quickbooks==0.9.9
 
 # Flask Web Framework
