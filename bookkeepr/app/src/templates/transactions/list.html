@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions - BookKeepr AI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                Transactions
+            </h2>
+        </div>
+        <div class="mt-4 flex md:ml-4 md:mt-0">
+            <a href="{{ url_for('transactions.review_queue') }}"
+               class="ml-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
+                Review Queue
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <form method="get" class="flex flex-wrap gap-4">
+            <div>
+                <label for="company_id" class="block text-sm font-medium text-gray-700">Company</label>
+                <select id="company_id" name="company_id"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <option value="">All Companies</option>
+                    {% for company in companies %}
+                    <option value="{{ company.id }}" {% if selected_company == company.id %}selected{% endif %}%>
+                        {{ company.company_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+                <select id="status" name="status"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <option value="">All Statuses</option>
+                    <option value="imported" {% if selected_status == 'imported' %}selected{% endif %}%>Imported</option>
+                    <option value="suggested" {% if selected_status == 'suggested' %}selected{% endif %}%>Suggested</option>
+                    <option value="categorized" {% if selected_status == 'categorized' %}selected{% endif %}%>Categorized</option>
+                    <option value="reviewed" {% if selected_status == 'reviewed' %}selected{% endif %}%>Reviewed</option>
+                </select>
+            </div>
+            
+            <div class="flex items-end">
+                <button type="submit"
+                        class="inline-flex items-center rounded-md bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500">
+                    Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Transactions Table -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-300">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Date</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Vendor</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Description</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Category</th>
+                        <th scope="col" class="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Amount</th>
+                        <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {% for tx in transactions.items %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
+                            {{ tx.date.strftime('%Y-%m-%d') }}
+                        </td>
+                        
+                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {{ tx.vendor or '-' }}
+                        </td>
+                        
+                        <td class="px-3 py-4 text-sm text-gray-500 max-w-xs truncate">
+                            {{ tx.description or tx.memo or '-' }}
+                        </td>
+                        
+                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                            {% if tx.category %}
+                                <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                                    {{ tx.category }}
+                                </span>
+                            {% elif tx.suggested_category %}
+                                <span class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20">
+                                    {{ tx.suggested_category }}
+                                </span>
+                            {% else %}
+                                <span class="text-gray-400">Uncategorized</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="whitespace-nowrap px-3 py-4 text-sm text-right font-medium text-gray-900">
+                            ${{ "%.2f"|format(tx.amount|float) }}
+                        </td>
+                        
+                        <td class="whitespace-nowrap px-3 py-4 text-sm">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                                {% if tx.status == 'imported' %}bg-gray-100 text-gray-800
+                                {% elif tx.status == 'suggested' %}bg-yellow-100 text-yellow-800
+                                {% elif tx.status == 'categorized' %}bg-blue-100 text-blue-800
+                                {% elif tx.status == 'reviewed' %}bg-green-100 text-green-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ tx.status|title }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-gray-500">
+                            No transactions found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        
+        <!-- Pagination -->
+        {% if transactions.pages > 1 %}
+        <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+            <div class="flex flex-1 justify-between sm:hidden">
+                {% if transactions.has_prev %}
+                <a href="{{ url_for('transactions.list_transactions', page=transactions.prev_num, company_id=selected_company, status=selected_status) }}"
+                   class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Previous
+                </a>
+                {% endif %}
+                {% if transactions.has_next %}
+                <a href="{{ url_for('transactions.list_transactions', page=transactions.next_num, company_id=selected_company, status=selected_status) }}"
+                   class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Showing <span class="font-medium">{{ (transactions.page - 1) * 50 + 1 }}</span> to
+                        <span class="font-medium">{{ [transactions.page * 50, transactions.total]|min }}</span> of
+                        <span class="font-medium">{{ transactions.total }}</span> results
+                    </p>
+                </div>
+                
+                <div>
+                    <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                        {% for page_num in transactions.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == transactions.page %}
+                                <span aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                    {{ page_num }}
+                                </span>
+                                {% else %}
+                                <a href="{{ url_for('transactions.list_transactions', page=page_num, company_id=selected_company, status=selected_status) }}"
+                                   class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                                    {{ page_num }}
+                                </a>
+                                {% endif %}
+                            {% else %}
+                                <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">...\u003c/span>
+                            {% endif %}
+                        {% endfor %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

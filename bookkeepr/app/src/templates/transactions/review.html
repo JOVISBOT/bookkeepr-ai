@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Review Queue - BookKeepr AI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                Review Queue
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Review and approve AI-suggested categorizations
+            </p>
+        </div>
+    </div>
+    
+    
+    {% if transactions %}
+    <!-- Review Cards -->
+    <div class="space-y-4">
+        {% for tx in transactions %}
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-4">
+                        <div class="text-lg font-medium text-gray-900">
+                            {{ tx.vendor or 'Unknown Vendor' }}
+                        </div>
+                        
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            {% if tx.status == 'imported' %}bg-gray-100 text-gray-800
+                            {% elif tx.status == 'suggested' %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ tx.status|title }}
+                        </span>
+                        
+                        {% if tx.category_confidence %}
+                        <span class="text-sm text-gray-500">
+                            {{ (tx.category_confidence * 100)|round }}% confidence
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mt-2 text-sm text-gray-500">
+                        {{ tx.date.strftime('%B %d, %Y') }} · {{ tx.description or tx.memo or 'No description' }}
+                    </div>
+                    
+                    <div class="mt-4 flex items-center gap-4">
+                        <div class="text-2xl font-bold text-gray-900">
+                            ${{ "%.2f"|format(tx.amount|float) }}
+                        </div>
+                        
+                        <div class="flex-1">
+                            {% if tx.suggested_category %}
+                            <div class="inline-flex items-center rounded-md bg-yellow-50 px-3 py-2 text-sm font-medium text-yellow-800">
+                                <svg class="mr-1.5 h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/>
+                                </svg>
+                                Suggested: {{ tx.suggested_category }}
+                            </div>
+                            {% else %}
+                            <div class="text-sm text-gray-500">
+                                No category suggestion available
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ml-6 flex flex-col gap-2">
+                    <button onclick="approveTransaction({{ tx.id }}, '{{ tx.suggested_category or 'Uncategorized' }}')"
+                            class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
+                        <svg class="mr-1.5 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/>
+                        </svg>
+                        Approve
+                    </button>
+                    
+                    <button onclick="showCategoryModal({{ tx.id }})"
+                            class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                        Change
+                    </button>
+                    
+                    <button onclick="skipTransaction({{ tx.id }})"
+                            class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                        Skip
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            
+            <h3 class="mt-2 text-sm font-semibold text-gray-900">All caught up!</h3>
+            <p class="mt-1 text-sm text-gray-500">
+                There are no transactions waiting for review.
+            </p>
+            
+            <div class="mt-6">
+                <a href="{{ url_for('transactions.list_transactions') }}"
+                   class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    View All Transactions
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function approveTransaction(transactionId, category) {
+    fetch(`/transactions/${transactionId}/categorize`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ category: category })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+
+function showCategoryModal(transactionId) {
+    // Simple prompt for now - could be a proper modal
+    const category = prompt('Enter category:');
+    if (category) {
+        approveTransaction(transactionId, category);
+    }
+}
+
+function skipTransaction(transactionId) {
+    // Just reload for now - skip functionality could be added later
+    window.location.reload();
+}
+</script>
+{% endblock %}

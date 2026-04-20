@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Sync Transactions - BookKeepr AI{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Sync Transactions</h1>
+    
+    <div id="sync-status" class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-4">
+        <p class="text-blue-800 mb-4">Connection verified! Ready to sync.</p>
+        
+        <button onclick="syncNow()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700">
+            Sync Now
+        </button>
+    </div>
+    
+    <div id="results" class="hidden">
+        <pre id="result-text" class="bg-gray-100 p-4 rounded-lg overflow-auto text-sm"></pre>
+    </div>
+</div>
+
+<script>
+function syncNow() {
+    const status = document.getElementById('sync-status');
+    const results = document.getElementById('results');
+    const resultText = document.getElementById('result-text');
+    
+    status.innerHTML = '<p class="text-blue-800">⏳ Syncing transactions from QuickBooks... This may take a moment.</p>';
+    
+    fetch('/api/v1/sync-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        results.classList.remove('hidden');
+        resultText.textContent = JSON.stringify(data, null, 2);
+        if (data.success) {
+            status.innerHTML = '<p class="text-green-800 font-semibold">✅ Sync completed! ' + data.message + '</p>';
+        } else {
+            status.innerHTML = '<p class="text-red-800">❌ Sync failed. See details below.</p>';
+        }
+    })
+    .catch(error => {
+        results.classList.remove('hidden');
+        resultText.textContent = 'Error: ' + error.message;
+        status.innerHTML = '<p class="text-red-800">❌ Network error.</p>';
+    });
+}
+</script>
+{% endblock %}

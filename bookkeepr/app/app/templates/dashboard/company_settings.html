@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Company Settings{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen">
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <h1 class="text-2xl font-bold text-gray-900">Company Settings</h1>
+            <p class="text-gray-600 mt-1">Manage your QuickBooks connection</p>
+        </div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- QBO Connection Card -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">QuickBooks Online Connection</h2>
+                <p class="text-gray-500 text-sm">Connect to your QuickBooks Online account</p>
+            </div>
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <i data-lucide="link" class="h-6 w-6 text-gray-400"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="font-medium text-gray-900">Not Connected</p>
+                            <p class="text-sm text-gray-500">Connect your QuickBooks Online account to sync transactions</p>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('quickbooks.connect') }}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
+                        Connect QuickBooks
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Connection Status -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Connection Status</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Status:</span>
+                        <span class="ml-2 text-red-600 font-medium">Disconnected</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Last Sync:</span>
+                        <span class="ml-2 text-gray-900">Never</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Company:</span>
+                        <span class="ml-2 text-gray-900">-</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Realm ID:</span>
+                        <span class="ml-2 text-gray-900">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

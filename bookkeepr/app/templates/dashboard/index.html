@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - BookKeepr AI{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="text-gray-600 mt-1">Manage your QuickBooks transactions and AI categorization</p>
+    </div>
+    
+    {% if not company %}
+    <!-- No Company Connected -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-8 mb-8">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg class="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="ml-4">
+                <h2 class="text-xl font-semibold text-yellow-800">QuickBooks Not Connected</h2>
+                <p class="text-yellow-700 mt-2">Connect your QuickBooks account to start syncing and auto-categorizing transactions.</p>
+                <a href="/auth/connect" class="inline-flex items-center mt-4 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    Connect QuickBooks
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Company Info Card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h2 class="text-lg font-semibold text-gray-900">{{ company.name }}</h2>
+                    <div class="flex items-center mt-1 text-sm text-gray-500">
+                        <span class="mr-4">Realm ID: <span class="font-mono text-gray-700">{{ company.realm_id }}</span></span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if company.is_connected %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                            {% if company.is_connected %}Connected{% else %}Disconnected{% endif %}
+                        </span>
+                        {% if company.qb_type %}
+                        <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ company.qb_type }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="text-right text-sm text-gray-500">
+                <p>Last Sync: <span class="font-medium text-gray-700">{{ stats.last_sync_at if stats else 'Never' }}</span></p>
+                <p class="mt-1">Status: <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {% if company.last_sync_status == 'success' %}bg-green-100 text-green-800{% elif company.last_sync_status == 'error' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ company.last_sync_status|capitalize if company.last_sync_status else 'Pending' }}
+                </span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Transactions This Month -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Transactions This Month</p>
+                    <p class="text-3xl font-bold text-blue-600 mt-1">{{ stats.month_transactions if stats else 0 }}</p>
+                </div>
+                <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">{{ stats.total_transactions if stats else 0 }} total in system</p>
+        </div>
+
+        <!-- Uncategorized Count -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Needs Review</p>
+                    <p class="text-3xl font-bold text-orange-600 mt-1">{{ stats.uncategorized_count if stats else 0 }}</p>
+                </div>
+                <div class="flex-shrink-0 h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <svg class="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">{{ stats.pending_count if stats else 0 }} pending approval</p>
+        </div>
+
+        <!-- Auto-Categorized Percentage -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">AI Categorized</p>
+                    <p class="text-3xl font-bold text-green-600 mt-1">{{ stats.auto_categorization_rate if stats else 0 }}%</p>
+                </div>
+                <div class="flex-shrink-0 h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">{{ stats.auto_categorized_count if stats else 0 }} transactions processed</p>
+        </div>
+
+        <!-- Last Sync -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Last Sync</p>
+                    <p class="text-xl font-bold text-gray-800 mt-1">{{ stats.last_sync_at if stats else 'Never' }}</p>
+                </div>
+                <div class="flex-shrink-0 h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">{{ company.sync_frequency|capitalize if company.sync_frequency else 'Manual' }} sync enabled</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-gray-50 rounded-xl border border-gray-200 p-6 mb-8">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Quick Actions</h3>
+        <div class="flex flex-wrap gap-4">
+            <a href="/sync" class="inline-flex items-center bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Sync Now
+            </a>
+            {% if stats and stats.uncategorized_count > 0 %}
+            <a href="/company/{{ company.id }}/review" class="inline-flex items-center bg-orange-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-orange-700 transition-colors shadow-sm">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Review Uncategorized
+                <span class="ml-2 bg-orange-800 text-xs px-2 py-0.5 rounded-full">{{ stats.uncategorized_count }}</span>
+            </a>
+            {% else %}
+            <button disabled class="inline-flex items-center bg-gray-300 text-gray-500 px-5 py-2.5 rounded-lg font-medium cursor-not-allowed">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Review Uncategorized
+            </button>
+            {% endif %}
+            <a href="#" onclick="alert('Reports feature coming soon!'); return false;" class="inline-flex items-center bg-gray-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-gray-700 transition-colors shadow-sm">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                View Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Transaction List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Recent Transactions</h2>
+            <a href="/company/{{ company.id }}/transactions" class="text-sm text-blue-600 hover:text-blue-800 font-medium">View All →</a>
+        </div>
+        
+        {% if transactions %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for txn in transactions %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ txn.transaction_date.strftime('%m/%d/%Y') if txn.transaction_date else '-' }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            <div class="max-w-xs truncate" title="{{ txn.description }}">
+                                {{ txn.description or 'No description' }}
+                            </div>
+                            {% if txn.payee_name %}
+                            <div class="text-xs text-gray-500 mt-0.5">{{ txn.payee_name }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium {% if txn.transaction_type == 'income' %}text-green-600{% else %}text-gray-900{% endif %}">
+                            {% if txn.transaction_type == 'income' %}+{% endif %}{{"${:,.2f}".format(txn.amount|float)}}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if txn.category %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ txn.category.name }}
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                Uncategorized
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if txn.needs_review %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Needs Review
+                            </span>
+                            {% elif txn.status == 'approved' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Approved
+                            </span>
+                            {% elif txn.status == 'categorized' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Categorized
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                {{ txn.status|capitalize }}
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination and pagination.pages > 1 %}
+        <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-500">
+                Showing {{ (pagination.page - 1) * pagination.per_page + 1 }} - 
+                {{ [pagination.page * pagination.per_page, pagination.total]|min }} 
+                of {{ pagination.total }} transactions
+            </div>
+            <div class="flex items-center space-x-2">
+                {% if pagination.has_prev %}
+                <a href="?page={{ pagination.prev_num }}" class="px-3 py-1 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    ← Previous
+                </a>
+                {% else %}
+                <button disabled class="px-3 py-1 rounded border border-gray-200 text-sm font-medium text-gray-400 cursor-not-allowed">
+                    ← Previous
+                </button>
+                {% endif %}
+                
+                <span class="text-sm text-gray-600">
+                    Page {{ pagination.page }} of {{ pagination.pages }}
+                </span>
+                
+                {% if pagination.has_next %}
+                <a href="?page={{ pagination.next_num }}" class="px-3 py-1 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Next →
+                </a>
+                {% else %}
+                <button disabled class="px-3 py-1 rounded border border-gray-200 text-sm font-medium text-gray-400 cursor-not-allowed">
+                    Next →
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="px-6 py-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No transactions yet</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by syncing your QuickBooks data.</p>
+            <div class="mt-6">
+                <a href="/sync" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    Sync Transactions
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

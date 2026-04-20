@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing{% endblock %}
+
+{% block content %}
+<div class="bg-white py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Simple, transparent pricing</h1>
+            <p class="text-xl text-gray-600">
+                Choose the plan that fits your business. All plans include a 14-day free trial.
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <!-- Standard -->
+            <div class="border border-gray-200 rounded-xl p-8 hover:shadow-lg transition-shadow">
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Standard</h3>
+                <p class="text-gray-500 mb-6">For small businesses</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold">$199</span>
+                    <span class="text-gray-500">/month</span>
+                </div>
+                <ul class="space-y-3 mb-8">
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Up to 500 transactions/month</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>AI categorization</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Basic reconciliation</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Email support</span>
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.register') }}" class="block w-full text-center border-2 border-emerald-600 text-emerald-600 py-3 rounded-lg font-semibold hover:bg-emerald-600 hover:text-white transition-colors">
+                    Start Free Trial
+                </a>
+            </div>
+            
+            <!-- Silver (Popular) -->
+            <div class="border-2 border-emerald-600 rounded-xl p-8 relative">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span class="bg-emerald-600 text-white px-4 py-1 rounded-full text-sm font-medium">Most Popular</span>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Silver</h3>
+                <p class="text-gray-500 mb-6">For growing businesses</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold">$299</span>
+                    <span class="text-gray-500">/month</span>
+                </div>
+                <ul class="space-y-3 mb-8">
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Up to 2,000 transactions/month</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Advanced AI categorization</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Smart reconciliation</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Priority support</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Invoice automation</span>
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.register') }}" class="block w-full text-center bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors">
+                    Start Free Trial
+                </a>
+            </div>
+            
+            <!-- Gold -->
+            <div class="border border-gray-200 rounded-xl p-8 hover:shadow-lg transition-shadow">
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Gold</h3>
+                <p class="text-gray-500 mb-6">For established businesses</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-bold">$399</span>
+                    <span class="text-gray-500">/month</span>
+                </div>
+                <ul class="space-y-3 mb-8">
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Unlimited transactions</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Enterprise AI categorization</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Advanced reconciliation</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Dedicated support</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>Multi-company support</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
+                        <span>API access</span>
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.register') }}" class="block w-full text-center border-2 border-emerald-600 text-emerald-600 py-3 rounded-lg font-semibold hover:bg-emerald-600 hover:text-white transition-colors">
+                    Contact Sales
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
