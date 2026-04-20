@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://bookkeepr-api.onrender.com/api/:path*" }
+  ],
+  "framework": "vite"
+}
