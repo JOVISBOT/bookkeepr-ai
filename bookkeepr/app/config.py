@@ -18,7 +18,7 @@ class Config:
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL', 
-        'postgresql://postgres:password@localhost:5432/bookkeepr'
+        'sqlite:///bookkeepr.db'  # Default to SQLite for Render
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
