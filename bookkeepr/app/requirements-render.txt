@@ -1,6 +1,9 @@
 # BookKeepr AI - Render Deployment
 # Simplified requirements without QuickBooks (optional feature)
 
+# Fuzzy String Matching
+rapidfuzz>=3.0.0
+
 # OpenAI for AI Categorization
 openai>=1.0.0
 
