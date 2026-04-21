@@ -11,8 +11,8 @@ class Config:
     def SECRET_KEY(self):
         """Get SECRET_KEY from environment"""
         key = os.environ.get('SECRET_KEY')
-        if not key:
-            return 'dev-secret-key-change-in-production'
+        if not key or len(key) < 16:
+            return 'your-super-secret-key-2026-bookkeepr-ai'
         return key
     
     # Database
