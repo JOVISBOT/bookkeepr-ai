@@ -22,6 +22,31 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # SQLite WAL Mode for better concurrency
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'connect_args': {
+            'check_same_thread': False,
+        },
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
+    
+    # Enable WAL mode on connection
+    @staticmethod
+    def init_app(app):
+        """Initialize application with WAL mode"""
+        with app.app_context():
+            from sqlalchemy import event
+            from sqlalchemy.engine import Engine
+            
+            @event.listens_for(Engine, "connect")
+            def set_sqlite_pragma(dbapi_conn, connection_record):
+                cursor = dbapi_conn.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA synchronous=NORMAL")
+                cursor.execute("PRAGMA cache_size=10000")
+                cursor.close()
+    
     # Session
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     
