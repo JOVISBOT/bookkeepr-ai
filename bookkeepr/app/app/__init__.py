@@ -18,7 +18,7 @@ def create_app(config_name='default'):
     from app.routes.main import bp as main_bp
     from app.routes.auth import bp as auth_bp
     from app.routes.dashboard import bp as dashboard_bp
-    from app.routes.api import api_bp
+    from app.routes.api import bp as api_bp
     from app.routes.quickbooks import bp as quickbooks_bp
     from app.routes.reconciliation import bp as reconciliation_bp
     
