@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// import type { Transaction } from "../types";
 import {
   getTransactions,
   getReviewQueue,
@@ -10,6 +9,13 @@ import {
   getAIMetrics,
   syncCompany,
 } from "../lib/api";
+
+// Cache times (ms) - smart strategy based on data change frequency
+const CACHE_TIMES = {
+  TRANSACTIONS: 1000 * 60 * 2,      // 2 min - changes frequently
+  REVIEW_QUEUE: 1000 * 60 * 1,      // 1 min - changes very frequently
+  AI_METRICS: 1000 * 60 * 5,         // 5 min - batch processed
+};
 
 // Get transactions
 export function useTransactions(
@@ -25,6 +31,8 @@ export function useTransactions(
       return getTransactions(companyId, page, perPage, needsReview);
     },
     enabled: !!companyId,
+    staleTime: CACHE_TIMES.TRANSACTIONS,
+    gcTime: CACHE_TIMES.TRANSACTIONS * 2,
   });
 }
 
@@ -43,6 +51,8 @@ export function useReviewQueue(
       return getReviewQueue(companyId, status, confidence, page, limit);
     },
     enabled: !!companyId,
+    staleTime: CACHE_TIMES.REVIEW_QUEUE,
+    gcTime: CACHE_TIMES.REVIEW_QUEUE * 2,
   });
 }
 
@@ -142,6 +152,8 @@ export function useAIMetrics(companyId: number | null, days = 30) {
       return getAIMetrics(companyId, days);
     },
     enabled: !!companyId,
+    staleTime: CACHE_TIMES.AI_METRICS,
+    gcTime: CACHE_TIMES.AI_METRICS * 2,
   });
 }
 
