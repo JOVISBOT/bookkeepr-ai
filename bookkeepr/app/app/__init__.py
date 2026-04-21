@@ -26,7 +26,7 @@ def create_app(config_name='default'):
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
-    app.register_blueprint(api_bp)  # url_prefix already set in blueprint
+    app.register_blueprint(api_bp, url_prefix='/api/v1')  # Added prefix
     app.register_blueprint(quickbooks_bp, url_prefix='/quickbooks')
     app.register_blueprint(reconciliation_bp, url_prefix='/api/v1')
     app.register_blueprint(billing_bp)

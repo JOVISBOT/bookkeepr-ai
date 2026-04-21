@@ -1,7 +1,7 @@
 """Billing and subscription routes"""
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.extensions import db
+from app import db
 from app.models.subscription import Subscription
 from app.services.stripe_service import StripeService
 import os

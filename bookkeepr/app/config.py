@@ -7,13 +7,7 @@ class Config:
     """Base configuration"""
     
     # Flask
-    @property
-    def SECRET_KEY(self):
-        """Get SECRET_KEY from environment"""
-        key = os.environ.get('SECRET_KEY')
-        if not key or len(key) < 16:
-            return 'your-super-secret-key-2026-bookkeepr-ai'
-        return key
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-super-secret-key-2026-bookkeepr-ai'
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get(
