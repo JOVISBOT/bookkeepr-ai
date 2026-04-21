@@ -23,6 +23,9 @@ services:
     publishDir: bookkeepr/app/frontend/dist
     routes:
       - type: rewrite
+        source: /health/*
+        destination: https://bookkeepr-api.onrender.com/health/:splat
+      - type: rewrite
         source: /api/*
         destination: https://bookkeepr-api.onrender.com/api/:splat
       - type: rewrite
