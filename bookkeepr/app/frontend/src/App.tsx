@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout";
@@ -6,6 +6,8 @@ import { Toaster } from "./components/ui/toaster";
 import { Dashboard } from "./pages/Dashboard";
 import { Transactions } from "./pages/Transactions";
 import { ReviewPage } from "./pages/ReviewPage";
+import { Login } from "./pages/Login";
+import { checkAuth } from "./lib/auth";
 
 // Lazy load heavy routes with Recharts (using named exports)
 const Reconciliation = lazy(() => import("./pages/Reconciliation").then(m => ({ default: m.Reconciliation })));
@@ -28,6 +30,28 @@ export const billingQueryConfig = { staleTime: 1000 * 60 * 30 }; // 30 min - sub
 
 function AppContent() {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  // Check auth status on mount
+  useEffect(() => {
+    checkAuth().then((auth) => {
+      setIsAuthenticated(auth);
+    });
+  }, []);
+
+  // Show loading while checking auth
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   const handleSync = async () => {
     setIsSyncing(true);
