@@ -10,9 +10,9 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { formatCurrency, formatDate } from "../../lib/utils";
-import { Badge } from "../ui/Badge";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import type { Transaction } from "../../types";
 import { ChevronLeft, ChevronRight, Search, ArrowUpDown } from "lucide-react";
 

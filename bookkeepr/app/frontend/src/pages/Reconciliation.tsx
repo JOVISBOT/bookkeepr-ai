@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getBankStatement, getCompanies } from "../lib/api";
-import type { BankStatementLine } from "../types";
+import type { BankStatement, BankStatementLine, Company } from "../types";
 import {
   BankStatementUpload,
   ReconciliationTable,
   MatchReviewModal,
   SummaryCards,
 } from "../components/reconciliation";
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { Select } from "../components/ui/Select";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 
 export function Reconciliation() {
   const { statementId } = useParams<{ statementId?: string }>();
@@ -23,33 +22,29 @@ export function Reconciliation() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Get companies
-  const { data: companiesData } = useQuery({
+  const { data: companies } = useQuery<Company[]>({
     queryKey: ["companies"],
     queryFn: getCompanies,
   });
 
-  // Get current statement details
-  const { data: statementData } = useQuery({
+  // Get statement if ID provided
+  const { data: statementData } = useQuery<{ statement: BankStatement }>({
     queryKey: ["bank-statement", statementId],
-    queryFn: () => getBankStatement(parseInt(statementId!)),
+    queryFn: () => getBankStatement(parseInt(statementId!, 10)),
     enabled: !!statementId,
   });
 
-  const companies = companiesData || [];
-  const currentStatement = statementData?.statement;
+  const statement = statementData?.statement;
 
-  // Auto-select company from statement or default to first
   useEffect(() => {
-    if (currentStatement) {
-      setSelectedCompanyId(currentStatement.company_id);
+    if (statement) {
       setShowUpload(false);
-    } else if (companies.length > 0 && !selectedCompanyId) {
-      setSelectedCompanyId(companies[0].id);
+      setSelectedCompanyId(statement.company_id);
     }
-  }, [currentStatement, companies, selectedCompanyId]);
+  }, [statement]);
 
-  const handleUploadSuccess = (newStatementId: number) => {
-    navigate(`/reconciliation/${newStatementId}`);
+  const handleUploadComplete = (id: number) => {
+    navigate(`/reconciliation/${id}`);
   };
 
   const handleReviewLine = (line: BankStatementLine) => {
@@ -63,140 +58,81 @@ export function Reconciliation() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bank Reconciliation</h1>
-          <p className="text-gray-500 mt-1">
-            Match bank statement lines with QuickBooks transactions
+          <h1 className="text-3xl font-bold tracking-tight">Bank Reconciliation</h1>
+          <p className="text-muted-foreground">
+            Match bank statements with your transactions
           </p>
         </div>
+        {statementId && (
+          <Button variant="outline" onClick={() => navigate("/reconciliation")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Upload
+          </Button>
+        )}
+      </div>
 
-        {/* Company Selector */}
-        <div className="w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Company
-          </label>
-          <Select
-            value={selectedCompanyId?.toString() || ""}
-            onChange={(e) => setSelectedCompanyId(parseInt(e.target.value))}
-            disabled={companies.length === 0 || !!statementId}
+      {/* Company Selector */}
+      {companies && companies.length > 1 && !statementId && (
+        <Card className="p-6">
+          <label className="text-sm font-medium mb-2 block">Select Company</label>
+          <select
+            value={selectedCompanyId || ""}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              setSelectedCompanyId(isNaN(val) ? null : val);
+            }}
+            className="w-full px-3 py-2 border rounded-md"
           >
+            <option value="">Select a company...</option>
             {companies.map((company) => (
               <option key={company.id} value={company.id}>
                 {company.name}
               </option>
             ))}
-          </Select>
-        </div>
-      </div>
-
-      {/* Upload Section (Collapsible) */}
-      {selectedCompanyId && (
-        <div>
-          <button
-            onClick={() => setShowUpload(!showUpload)}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mb-3"
-          >
-            {showUpload ? (
-              <>
-                <ChevronUp className="h-4 w-4" />
-                Hide Upload
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-4 w-4" />
-                Upload New Statement
-              </>
-            )}
-          </button>
-
-          {showUpload && (
-            <BankStatementUpload
-              companyId={selectedCompanyId}
-              onUploadSuccess={handleUploadSuccess}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Current Statement View */}
-      {statementId && currentStatement ? (
-        <div className="space-y-6">
-          {/* Statement Header */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/reconciliation")}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <div>
-                  <h2 className="text-lg font-semibold">
-                    {currentStatement.file_name}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    Uploaded{" "}
-                    {new Date(currentStatement.upload_date).toLocaleDateString()} ·{" "}
-                    {currentStatement.line_count} lines ·{" "}
-                    Status:{" "}
-                    <span
-                      className={`font-medium ${
-                        currentStatement.status === "reconciled"
-                          ? "text-green-600"
-                          : "text-yellow-600"
-                      }`}
-                    >
-                      {currentStatement.status}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Summary Cards */}
-          <SummaryCards statementId={parseInt(statementId)} />
-
-          {/* Reconciliation Table */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Statement Lines</h3>
-            <ReconciliationTable
-              statementId={parseInt(statementId)}
-              onReviewLine={handleReviewLine}
-            />
-          </Card>
-        </div>
-      ) : statementId ? (
-        // Loading or invalid statement
-        <Card className="p-8 text-center">
-          <p className="text-gray-500">Loading statement...</p>
-        </Card>
-      ) : (
-        // No statement selected - show instructions
-        <Card className="p-8 text-center">
-          <p className="text-gray-600 mb-2">
-            Upload a bank statement CSV to begin reconciliation
-          </p>
-          <p className="text-sm text-gray-500">
-            Or select a previously uploaded statement from your statement history
-          </p>
+          </select>
         </Card>
       )}
 
-      {/* Match Review Modal */}
-      <MatchReviewModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        line={reviewLine}
-        companyId={currentStatement?.company_id || selectedCompanyId || 0}
-        statementId={parseInt(statementId || "0")}
-      />
+      {/* Upload Section - only show if we have a company selected */}
+      {showUpload && !statementId && selectedCompanyId && (
+        <BankStatementUpload
+          companyId={selectedCompanyId}
+          onUploadSuccess={handleUploadComplete}
+        />
+      )}
+
+      {/* Upload placeholder when no company selected */}
+      {showUpload && !statementId && !selectedCompanyId && (
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Select a company above to upload a bank statement</p>
+        </Card>
+      )}
+
+      {/* Statement Review */}
+      {statementId && (
+        <>
+          <SummaryCards statementId={parseInt(statementId, 10)} />
+          <ReconciliationTable
+            statementId={parseInt(statementId, 10)}
+            onReviewLine={handleReviewLine}
+          />
+        </>
+      )}
+
+      {/* Review Modal */}
+      {reviewLine && statementId && selectedCompanyId && (
+        <MatchReviewModal
+          line={reviewLine}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          statementId={parseInt(statementId, 10)}
+          companyId={selectedCompanyId}
+        />
+      )}
     </div>
   );
 }

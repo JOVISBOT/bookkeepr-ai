@@ -12,8 +12,8 @@ import {
 import { Check, X, Search, MoreHorizontal } from "lucide-react";
 import { getBankStatementLines, approveMatch, rejectMatch } from "../../lib/api";
 import type { BankStatementLine } from "../../types";
-import { Button } from "../ui/Button";
-import { Badge } from "../ui/Badge";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 
 interface ReconciliationTableProps {
   statementId: number;

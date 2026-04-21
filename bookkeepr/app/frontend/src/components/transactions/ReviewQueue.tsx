@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { formatCurrency, formatDate, cn } from "../../lib/utils";
-import { Badge } from "../ui/Badge";
-import { Button } from "../ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import type { Transaction } from "../../types";
 import {
   CheckCircle,

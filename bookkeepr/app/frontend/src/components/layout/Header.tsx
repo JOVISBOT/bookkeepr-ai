@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { Button } from "../ui/Button";
+import { Button } from "../ui/button";
 import { RefreshCw, Plus } from "lucide-react";
 
 interface HeaderProps {

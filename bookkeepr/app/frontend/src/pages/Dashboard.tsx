@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useCompanies, useAIMetrics, useReviewQueue } from "../hooks";
 import { StatCard, SpendingChart, CategoryChart, AccuracyChart } from "../components/dashboard";
-import { Button } from "../components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/Card";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { formatCurrency, formatNumber, formatPercentage } from "../lib/utils";
 import {
   DollarSign,

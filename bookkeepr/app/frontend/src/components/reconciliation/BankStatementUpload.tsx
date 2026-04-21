@@ -2,9 +2,9 @@ import { useState, useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Upload, File, CheckCircle, AlertCircle, X } from "lucide-react";
 import { uploadBankStatement } from "../../lib/api";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { Input } from "../ui/Input";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
+import { Input } from "../ui/input";
 
 interface BankStatementUploadProps {
   companyId: number;

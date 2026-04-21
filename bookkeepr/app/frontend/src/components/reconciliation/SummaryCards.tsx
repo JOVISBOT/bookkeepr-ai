@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, CheckCircle, HelpCircle, FileText } from "lucide-react";
 import { getReconciliationSummary, runAutoMatch } from "../../lib/api";
-import { Card } from "../ui/Card";
-import { Button } from "../ui/Button";
+import { Card } from "../ui/card";
+import { Button } from "../ui/button";
 import type { ReconciliationSummary } from "../../types";
 
 interface SummaryCardsProps {
