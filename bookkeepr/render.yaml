@@ -4,7 +4,7 @@ services:
     name: bookkeepr-api
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements-render.txt
+    buildCommand: pip cache purge && pip install -r requirements-render.txt
     startCommand: gunicorn run:app
     rootDir: bookkeepr/app
     envVars:
