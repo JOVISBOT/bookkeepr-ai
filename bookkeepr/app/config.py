@@ -7,9 +7,13 @@ class Config:
     """Base configuration"""
     
     # Flask
-    SECRET_KEY = os.environ.get('SECRET_KEY')
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY environment variable must be set")
+    @property
+    def SECRET_KEY(self):
+        """Get SECRET_KEY from environment"""
+        key = os.environ.get('SECRET_KEY')
+        if not key:
+            return 'dev-secret-key-change-in-production'
+        return key
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get(
