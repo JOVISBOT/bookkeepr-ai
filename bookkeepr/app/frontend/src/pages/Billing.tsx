@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { getPlans, getSubscription, createCheckout } from "@/lib/api";
+import { getSubscription, createCheckout } from "@/lib/api";
 
 const plans = [
   {
