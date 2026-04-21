@@ -21,6 +21,7 @@ def create_app(config_name='default'):
     from app.routes.api import bp as api_bp
     from app.routes.quickbooks import bp as quickbooks_bp
     from app.routes.reconciliation import bp as reconciliation_bp
+    from app.routes.billing import billing_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -28,6 +29,7 @@ def create_app(config_name='default'):
     app.register_blueprint(api_bp)  # url_prefix already set in blueprint
     app.register_blueprint(quickbooks_bp, url_prefix='/quickbooks')
     app.register_blueprint(reconciliation_bp, url_prefix='/api/v1')
+    app.register_blueprint(billing_bp)
     
     # Register catch-all route LAST (after all blueprints)
     from flask import send_from_directory
@@ -45,15 +47,15 @@ def create_app(config_name='default'):
         if path.startswith('api/') or path.startswith('auth/') or path.startswith('dashboard/'):
             return "API route not found", 404
             
-        frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
+        static_dir = os.path.join(os.path.dirname(__file__), '..', 'static')
         
         # Check if file exists in dist folder
-        file_path = os.path.join(frontend_dir, path)
+        file_path = os.path.join(static_dir, path)
         if path and os.path.exists(file_path) and os.path.isfile(file_path):
-            return send_from_directory(frontend_dir, path)
+            return send_from_directory(static_dir, path)
             
         # Otherwise serve index.html for client-side routing
-        return send_from_directory(frontend_dir, 'index.html')
+        return send_from_directory(static_dir, 'index.html')
     
     # Register error handlers
     register_error_handlers(app)

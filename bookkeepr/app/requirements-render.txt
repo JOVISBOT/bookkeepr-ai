@@ -20,6 +20,9 @@ flask-wtf==1.2.1
 # Environment & Config
 python-dotenv==1.0.1
 
+# Payments
+stripe>=7.0.0
+
 # HTTP Requests
 requests==2.31.0
 

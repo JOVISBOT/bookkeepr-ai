@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout";
+import { Toaster } from "./components/ui/toaster";
 import { Dashboard } from "./pages/Dashboard";
 import { Transactions } from "./pages/Transactions";
 import { ReviewPage } from "./pages/ReviewPage";
 import { Reconciliation } from "./pages/Reconciliation";
+import { Billing } from "./pages/Billing";
 import { useState } from "react";
 
 const queryClient = new QueryClient({
@@ -39,6 +41,19 @@ function AppContent() {
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/reconciliation" element={<Reconciliation />} />
           <Route path="/reconciliation/:statementId" element={<Reconciliation />} />
+          <Route path="/billing" element={<Billing />} />
+          <Route path="/billing/success" element={
+            <div className="flex flex-col items-center justify-center h-64 space-y-4">
+              <h2 className="text-2xl font-bold text-green-600">Payment Successful!</h2>
+              <p>Your subscription is now active.</p>
+            </div>
+          } />
+          <Route path="/billing/cancel" element={
+            <div className="flex flex-col items-center justify-center h-64 space-y-4">
+              <h2 className="text-2xl font-bold text-slate-600">Payment Cancelled</h2>
+              <p>You can try again anytime.</p>
+            </div>
+          } />
           <Route
             path="/companies"
             element={
@@ -73,6 +88,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppContent />
+      <Toaster />
     </QueryClientProvider>
   );
 }

@@ -10,6 +10,7 @@ import {
   FileText,
   Menu,
   X,
+  CreditCard,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +21,7 @@ const navItems = [
   { to: "/reconciliation", icon: FileText, label: "Reconciliation" },
   { to: "/companies", icon: Building2, label: "Companies" },
   { to: "/ai", icon: Brain, label: "AI Settings" },
+  { to: "/billing", icon: CreditCard, label: "Billing" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
