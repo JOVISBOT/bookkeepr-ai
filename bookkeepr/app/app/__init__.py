@@ -22,6 +22,9 @@ def create_app(config_name='default'):
     from app.routes.quickbooks import bp as quickbooks_bp
     from app.routes.reconciliation import bp as reconciliation_bp
     from app.routes.billing import billing_bp
+    from app.routes.charts import bp as charts_bp
+    from app.routes.reports import bp as reports_bp
+    from app.routes.ai import bp as ai_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -30,23 +33,18 @@ def create_app(config_name='default'):
     app.register_blueprint(quickbooks_bp, url_prefix='/quickbooks')
     app.register_blueprint(reconciliation_bp, url_prefix='/api/v1')
     app.register_blueprint(billing_bp)
+    app.register_blueprint(charts_bp)
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(ai_bp, url_prefix='/api/v1/ai')
     
     # Register catch-all route LAST (after all blueprints)
     from flask import send_from_directory
     import os
     
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
+    @app.route('/app', defaults={'path': ''})
+    @app.route('/app/<path:path>')
     def serve_react(path):
-        """Serve React app for all non-API routes"""
-        # Check if this path matches an API/blueprint route
-        # Flask tries blueprints first due to registration order,
-        # but we need to make sure we don't interfere
-        
-        # API routes are handled by blueprints - skip if matches api/auth/dashboard
-        if path.startswith('api/') or path.startswith('auth/') or path.startswith('dashboard/'):
-            return "API route not found", 404
-            
+        """Serve React app for /app routes only"""
         static_dir = os.path.join(os.path.dirname(__file__), '..', 'static')
         
         # Check if file exists in dist folder
