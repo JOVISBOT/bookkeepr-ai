@@ -15,9 +15,19 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(100))
     last_name = db.Column(db.String(100))
     
+    # Multi-tenant
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=True, index=True)
+    
+    # RBAC: 'operator' (firm owner), 'client' (end customer), 'viewer' (read-only)
+    role = db.Column(db.String(20), default='operator', nullable=False, index=True)
+    
+    # MFA
+    mfa_enabled = db.Column(db.Boolean, default=False)
+    mfa_secret = db.Column(db.String(64))  # encrypted TOTP secret
+    
     # Status
     is_active = db.Column(db.Boolean, default=True)
-    is_admin = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Boolean, default=False)  # superadmin (cross-tenant)
     email_verified = db.Column(db.Boolean, default=False)
     
     # Timestamps
@@ -62,8 +72,27 @@ class User(UserMixin, db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'full_name': self.full_name,
+            'tenant_id': self.tenant_id,
+            'role': self.role,
+            'mfa_enabled': self.mfa_enabled,
             'is_active': self.is_active,
             'is_admin': self.is_admin,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login_at': self.last_login_at.isoformat() if self.last_login_at else None
         }
+    
+    # Role helpers
+    @property
+    def is_operator(self):
+        return self.role == 'operator'
+    
+    @property
+    def is_client(self):
+        return self.role == 'client'
+    
+    @property
+    def is_viewer(self):
+        return self.role == 'viewer'
+    
+    def has_role(self, *roles):
+        return self.role in roles

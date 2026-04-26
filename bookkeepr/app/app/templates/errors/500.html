@@ -5,12 +5,10 @@
 {% block content %}
 <div class="min-h-screen flex items-center justify-center bg-gray-50">
     <div class="text-center">
-        <div class="flex justify-center mb-6">
-            <i data-lucide="alert-circle" class="h-24 w-24 text-red-400"></i>
-        </div>
+        <i data-lucide="server-crash" class="h-20 w-20 text-red-500 mx-auto mb-6"></i>
         <h1 class="text-4xl font-bold text-gray-900 mb-4">500 - Server Error</h1>
-        <p class="text-gray-600 mb-8">Something went wrong on our end. Please try again later.</p>
-        <a href="{{ url_for('main.index') }}" class="bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
+        <p class="text-gray-600 mb-8">Something went wrong on our end. We're working to fix it.</p>
+        <a href="{{ url_for('main.index') }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
             Go Home
         </a>
     </div>

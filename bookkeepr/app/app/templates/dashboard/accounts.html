@@ -3,33 +3,97 @@
 {% block title %}Chart of Accounts{% endblock %}
 
 {% block content %}
-<div class="bg-gray-50 min-h-screen">
-    <div class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <h1 class="text-2xl font-bold text-gray-900">Chart of Accounts</h1>
+<div class="min-h-screen bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Chart of Accounts</h1>
+          <p class="text-gray-600 mt-1">Your business's financial structure</p>
         </div>
+        <button class="bk-btn-primary">
+          <i data-lucide="plus" class="h-4 w-4"></i>
+          Add Account
+        </button>
+      </div>
     </div>
-    
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <tr>
-                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">
-                            No accounts yet. Connect your QuickBooks account to sync your chart of accounts.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bk-card">
+        <div class="text-xs uppercase text-gray-500 tracking-wide">Total Accounts</div>
+        <div class="text-2xl font-bold text-gray-900 mt-1">{{ accounts|length|default(0) }}</div>
+        <div class="text-xs text-gray-500 mt-1">active</div>
+      </div>
+      <div class="bk-card">
+        <div class="text-xs uppercase text-gray-500 tracking-wide">Assets</div>
+        <div class="text-2xl font-bold text-gray-900 mt-1">{{ accounts|selectattr('type', 'equalto', 'asset')|list|length|default(0) }}</div>
+        <div class="text-xs text-gray-500 mt-1">asset accounts</div>
+      </div>
+      <div class="bk-card">
+        <div class="text-xs uppercase text-gray-500 tracking-wide">Liabilities</div>
+        <div class="text-2xl font-bold text-gray-900 mt-1">{{ accounts|selectattr('type', 'equalto', 'liability')|list|length|default(0) }}</div>
+        <div class="text-xs text-gray-500 mt-1">liability accounts</div>
+      </div>
+      <div class="bk-card">
+        <div class="text-xs uppercase text-gray-500 tracking-wide">Revenue</div>
+        <div class="text-2xl font-bold text-gray-900 mt-1">{{ accounts|selectattr('type', 'equalto', 'revenue')|list|length|default(0) }}</div>
+        <div class="text-xs text-gray-500 mt-1">revenue accounts</div>
+      </div>
     </div>
+
+    <!-- Table -->
+    <div class="bk-card p-0 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">All Accounts</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="bk-table">
+          <thead>
+            <tr>
+              <th>Account Name</th>
+              <th>Type</th>
+              <th>Number</th>
+              <th class="text-right">Balance</th>
+              <th>Status</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for account in accounts %}
+            <tr>
+              <td class="font-medium">{{ account.name }}</td>
+              <td><span class="bk-badge bk-badge-info">{{ account.type|title }}</span></td>
+              <td class="text-gray-600">{{ account.account_number or '-' }}</td>
+              <td class="text-right tabular-nums {% if account.balance > 0 %}text-green-600{% else %}text-red-600{% endif %} font-medium">
+                {% if account.balance > 0 %}+{% endif %}${{ "%.2f"|format(account.balance|abs) }}
+              </td>
+              <td><span class="bk-badge bk-badge-success">{{ account.status|default('Active') }}</span></td>
+              <td class="text-right"><a href="#" class="bk-btn-secondary text-xs">View</a></td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center py-12">
+                <div class="inline-flex p-4 rounded-full mb-3" style="background: var(--bk-primary-light);">
+                  <i data-lucide="folder-tree" class="h-8 w-8" style="color: var(--bk-primary);"></i>
+                </div>
+                <p class="text-gray-700 font-medium mb-1">No accounts yet</p>
+                <p class="text-gray-500 text-sm mb-4">Connect QuickBooks to import your Chart of Accounts</p>
+                <button class="bk-btn-primary" onclick="window.location.href='/quickbooks/connect'">
+                  <i data-lucide="link" class="h-4 w-4"></i>
+                  Connect QuickBooks
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

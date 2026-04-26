@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Review Queue{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen">
+    
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Review Queue</h1>
+                    <p class="text-gray-600 mt-1">Review and approve AI categorization suggestions</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">AI Accuracy Today</p>
+                        <p class="text-2xl font-bold {% if stats.accuracy_rate >= 90 %}text-blue-600{% elif stats.accuracy_rate >= 70 %}text-amber-600{% else %}text-red-600{% endif %}">
+                            {{ stats.accuracy_rate }}%
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center">
+                    <div class="p-3 bg-amber-100 rounded-lg">
+                        <i data-lucide="clock" class="h-6 w-6 text-amber-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Pending Review</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.pending_review }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center">
+                    <div class="p-3 bg-blue-100 rounded-lg">
+                        <i data-lucide="check-circle" class="h-6 w-6 text-blue-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Approved Today</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.approved_today }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center">
+                    <div class="p-3 bg-red-100 rounded-lg">
+                        <i data-lucide="x-circle" class="h-6 w-6 text-red-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Rejected Today</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.rejected_today }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center">
+                    <div class="p-3 bg-blue-100 rounded-lg">
+                        <i data-lucide="trending-up" class="h-6 w-6 text-blue-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">AI Accuracy Rate</p>
+                        <p class="text-2xl font-bold {% if stats.accuracy_rate >= 90 %}text-blue-600{% elif stats.accuracy_rate >= 70 %}text-amber-600{% else %}text-red-600{% endif %}">
+                            {{ stats.accuracy_rate }}%
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bulk Actions -->
+        {% if transactions %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-6 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <input type="checkbox" id="select-all" class="h-4 w-4 text-blue-600 rounded">
+                <label for="select-all" class="text-sm font-medium text-gray-700">Select All</label>
+            </div>
+            <div class="flex space-x-3">
+                <button id="bulk-approve-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50" disabled>
+                    Approve Selected
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Transactions Table -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+            {% if transactions %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="w-10 px-6 py-3"></th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                            <th class="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Suggested Category</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
+                            <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for txn in transactions %}
+                        <tr class="hover:bg-gray-50 transition-colors" data-transaction-id="{{ txn.id }}">
+                            <td class="px-6 py-4">
+                                <input type="checkbox" class="txn-checkbox h-4 w-4 text-blue-600 rounded" value="{{ txn.id }}">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ txn.transaction_date.strftime('%Y-%m-%d') if txn.transaction_date else 'N/A' }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                                {{ txn.description or 'No description' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {{ txn.vendor_name or 'N/A' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono {% if txn.amount < 0 %}text-red-600{% else %}text-blue-600{% endif %}">
+                                {{ "%.2f"|format(txn.amount|float) }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {{ txn.suggested_category }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                        <div class="bg-{% if txn.suggested_confidence >= 80 %}blue{% elif txn.suggested_confidence >= 60 %}amber{% else %}red{% endif %}-500 h-2 rounded-full">
+                                            style="width: {{ txn.suggested_confidence or 0 }}%">
+                                        </div>
+                                    </div>
+                                    <span class="text-sm text-gray-600">{{ "%.0f"|format(txn.suggested_confidence or 0) }}%</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <button class="approve-btn bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded-lg transition-colors" data-id="{{ txn.id }}" title="Approve">
+                                        <i data-lucide="check" class="h-4 w-4"></i>
+                                    </button>
+                                    <button class="reject-btn bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded-lg transition-colors" data-id="{{ txn.id }}" title="Reject">
+                                        <i data-lucide="x" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-16">
+                <i data-lucide="check-circle" class="h-16 w-16 text-blue-200 mx-auto mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">All caught up!</h3>
+                <p class="text-gray-500">No transactions pending review. Great work!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="reject-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Reject Categorization</h3>
+        </div>
+        <div class="p-6">
+            <p class="text-sm text-gray-600 mb-4">Provide the correct category to help train the AI:</p>
+            <select id="correct-category" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4">
+                <option value="">-- Select correct category --</option>
+                <option value="Operating Expenses">Operating Expenses</option>
+                <option value="Rent">Rent</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Sales">Sales</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Equipment">Equipment</option>
+                <option value="Services">Services</option>
+                <option value="Other">Other</option>
+            </select>
+            <textarea id="reject-notes" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm" rows="2" placeholder="Notes (optional)"></textarea>
+        </div>
+        <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <button id="cancel-reject" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
+            <button id="confirm-reject" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Reject & Correct</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentRejectId = null;
+
+// Select all checkbox
+document.getElementById('select-all')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.txn-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+    updateBulkActions();
+});
+
+// Individual checkboxes
+document.querySelectorAll('.txn-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateBulkActions);
+});
+
+function updateBulkActions() {
+    const checked = document.querySelectorAll('.txn-checkbox:checked');
+    const btn = document.getElementById('bulk-approve-btn');
+    btn.disabled = checked.length === 0;
+    btn.textContent = `Approve Selected (${checked.length})`;
+}
+
+// Bulk approve
+document.getElementById('bulk-approve-btn')?.addEventListener('click', async function() {
+    const ids = Array.from(document.querySelectorAll('.txn-checkbox:checked')).map(cb => parseInt(cb.value));
+    if (!ids.length) return;
+    
+    const res = await fetch('{{ url_for("review.batch_approve") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({transaction_ids: ids})
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+        window.location.reload();
+    } else {
+        alert(data.error || 'Failed to approve');
+    }
+});
+
+// Approve single
+document.querySelectorAll('.approve-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const id = this.dataset.id;
+        const res = await fetch(`/review/approve/${id}`, {method: 'POST'});
+        const data = await res.json();
+        if (data.success) {
+            document.querySelector(`tr[data-transaction-id="${id}"]`)?.remove();
+            updateStats();
+        }
+    });
+});
+
+// Reject single
+document.querySelectorAll('.reject-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        currentRejectId = this.dataset.id;
+        document.getElementById('reject-modal').classList.remove('hidden');
+        document.getElementById('reject-modal').classList.add('flex');
+    });
+});
+
+document.getElementById('cancel-reject')?.addEventListener('click', function() {
+    document.getElementById('reject-modal').classList.add('hidden');
+    document.getElementById('reject-modal').classList.remove('flex');
+    currentRejectId = null;
+});
+
+document.getElementById('confirm-reject')?.addEventListener('click', async function() {
+    if (!currentRejectId) return;
+    
+    const category = document.getElementById('correct-category').value;
+    const notes = document.getElementById('reject-notes').value;
+    
+    const res = await fetch(`/review/reject/${currentRejectId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({correct_category: category, notes: notes})
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+        document.querySelector(`tr[data-transaction-id="${currentRejectId}"]`)?.remove();
+        document.getElementById('reject-modal').classList.add('hidden');
+        document.getElementById('reject-modal').classList.remove('flex');
+        currentRejectId = null;
+        updateStats();
+    }
+});
+
+function updateStats() {
+    // Reload page after a short delay to refresh stats
+    setTimeout(() => window.location.reload(), 500);
+}
+</script>
+{% endblock %}

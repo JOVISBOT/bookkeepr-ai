@@ -8,6 +8,9 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- Unified BookKeepr Theme (overrides + design system) -->
+    <link rel="stylesheet" href="/static/css/theme.css">
+    
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,21 +35,86 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="{{ url_for('main.index') }}" class="flex items-center">
-                        <i data-lucide="book-check" class="h-8 w-8 text-emerald-600"></i>
+                        <i data-lucide="book-check" class="h-8 w-8 text-blue-600"></i>
                         <span class="ml-2 text-xl font-bold">BookKeepr AI</span>
                     </a>
                 </div>
                 
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-1">
                     {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('dashboard.index') }}" class="text-gray-700 hover:text-emerald-600 font-medium">Dashboard</a>
-                        <a href="{{ url_for('dashboard.transactions') }}" class="text-gray-700 hover:text-emerald-600 font-medium">Transactions</a>
-                        <a href="{{ url_for('dashboard.settings') }}" class="text-gray-700 hover:text-emerald-600 font-medium">Settings</a>
-                        <a href="{{ url_for('auth.logout') }}" class="text-gray-700 hover:text-red-600 font-medium">Logout</a>
+                        <a href="{{ url_for('dashboard.index') }}" class="text-gray-700 hover:text-blue-600 font-medium px-3 py-2">Dashboard</a>
+                        
+                        <!-- Money dropdown -->
+                        <div class="relative" data-dropdown>
+                            <button class="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 inline-flex items-center gap-1" data-dropdown-toggle>
+                                Money
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div class="hidden absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20" data-dropdown-menu>
+                                <a href="{{ url_for('dashboard.transactions') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Transactions</a>
+                                <a href="{{ url_for('imports.upload_csv') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Import CSV</a>
+                                <a href="{{ url_for('review.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Review Queue</a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <a href="{{ url_for('clients.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Clients</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Reports dropdown -->
+                        <div class="relative" data-dropdown>
+                            <button class="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 inline-flex items-center gap-1" data-dropdown-toggle>
+                                Reports
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div class="hidden absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20" data-dropdown-menu>
+                                <a href="{{ url_for('reports.reports_dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium">All Reports</a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <a href="{{ url_for('reports.reports_dashboard') }}#pnl" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profit & Loss</a>
+                                <a href="{{ url_for('reports.reports_dashboard') }}#balance" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Balance Sheet</a>
+                                <a href="{{ url_for('reports.reports_dashboard') }}#cashflow" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Cash Flow</a>
+                                <a href="{{ url_for('reports.reports_dashboard') }}#ledger" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">General Ledger</a>
+                                <a href="{{ url_for('reports.reports_dashboard') }}#trial-balance" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Trial Balance</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Banking dropdown -->
+                        <div class="relative" data-dropdown>
+                            <button class="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 inline-flex items-center gap-1" data-dropdown-toggle>
+                                Banking
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div class="hidden absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20" data-dropdown-menu>
+                                <a href="/quickbooks/connect" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Connect QuickBooks</a>
+                                <a href="/banks/connect" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Connect Bank</a>
+                                <a href="/api/v1/reconciliation" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Reconciliation</a>
+                            </div>
+                        </div>
+                        
+                        <a href="{{ url_for('pricing.index') }}" class="text-gray-700 hover:text-blue-600 font-medium px-3 py-2">Billing</a>
+                        
+                        <!-- Account dropdown -->
+                        <div class="relative" data-dropdown>
+                            <button class="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 inline-flex items-center gap-1" data-dropdown-toggle>
+                                <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 inline-flex items-center justify-center text-xs font-bold">{{ (current_user.first_name or current_user.email)[0]|upper }}</span>
+                            </button>
+                            <div class="hidden absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20" data-dropdown-menu>
+                                <div class="px-4 py-2 border-b border-gray-100">
+                                    <p class="text-sm font-medium text-gray-900">{{ current_user.first_name or current_user.email.split('@')[0] }}</p>
+                                    <p class="text-xs text-gray-500 truncate">{{ current_user.email }}</p>
+                                </div>
+                                <a href="{{ url_for('dashboard.settings') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Settings</a>
+                                <a href="{{ url_for('dashboard.accounts') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Chart of Accounts</a>
+                                <a href="/mfa/setup" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Security & MFA</a>
+                                {% if current_user.is_admin %}
+                                <a href="{{ url_for('admin.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Admin Panel</a>
+                                {% endif %}
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <a href="{{ url_for('auth.logout') }}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</a>
+                            </div>
+                        </div>
                     {% else %}
-                        <a href="{{ url_for('main.pricing') }}" class="text-gray-700 hover:text-emerald-600 font-medium">Pricing</a>
-                        <a href="{{ url_for('auth.login') }}" class="text-gray-700 hover:text-emerald-600 font-medium">Sign In</a>
-                        <a href="{{ url_for('auth.register') }}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors">Get Started</a>
+                        <a href="{{ url_for('pricing.index') }}" class="text-gray-700 hover:text-blue-600 font-medium px-3 py-2">Pricing</a>
+                        <a href="{{ url_for('auth.login') }}" class="text-gray-700 hover:text-blue-600 font-medium px-3 py-2">Sign In</a>
+                        <a href="{{ url_for('auth.register') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors ml-2">Get Started</a>
                     {% endif %}
                 </div>
             </div>
@@ -58,7 +126,7 @@
         {% if messages %}
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
                 {% for category, message in messages %}
-                    <div class="rounded-lg p-4 mb-4 {% if category == 'success' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% elif category == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+                    <div class="rounded-lg p-4 mb-4 {% if category == 'success' %}bg-blue-50 text-blue-800 border border-blue-200{% elif category == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -109,6 +177,22 @@
             </div>
         </div>
     </footer>
+    
+    <!-- Dropdown handler -->
+    <script>
+      document.querySelectorAll('[data-dropdown]').forEach(dd => {
+        const toggle = dd.querySelector('[data-dropdown-toggle]');
+        const menu = dd.querySelector('[data-dropdown-menu]');
+        toggle.addEventListener('click', e => {
+          e.stopPropagation();
+          document.querySelectorAll('[data-dropdown-menu]').forEach(m => { if (m !== menu) m.classList.add('hidden'); });
+          menu.classList.toggle('hidden');
+        });
+      });
+      document.addEventListener('click', () => {
+        document.querySelectorAll('[data-dropdown-menu]').forEach(m => m.classList.add('hidden'));
+      });
+    </script>
     
     <!-- Initialize Lucide Icons -->
     <script>lucide.createIcons();</script>

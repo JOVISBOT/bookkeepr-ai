@@ -9,10 +9,13 @@ class Config:
     # Flask
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-super-secret-key-2026-bookkeepr-ai'
     
-    # Database
+    # Database - resolve to absolute path for instance/bookkeepr.db
+    _BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    _DB_PATH = os.path.join(_BASE_DIR, 'instance', 'bookkeepr.db').replace('\\', '/')
+    _DEFAULT_DB = f'sqlite:///{_DB_PATH}'
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL', 
-        'sqlite:///bookkeepr.db'  # Default to SQLite for Render
+        _DEFAULT_DB
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     

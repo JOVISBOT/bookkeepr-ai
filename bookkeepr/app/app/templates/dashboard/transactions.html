@@ -3,53 +3,126 @@
 {% block title %}Transactions{% endblock %}
 
 {% block content %}
-<div class="bg-gray-50 min-h-screen">
-    <div class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <h1 class="text-2xl font-bold text-gray-900">Transactions</h1>
+<div class="min-h-screen bg-gray-50">
+
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Transactions</h1>
+          <p class="text-gray-600 mt-1">All your imported and synced transactions</p>
         </div>
+        <button class="bk-btn-primary" onclick="window.location.href='/imports/csv'">
+          <i data-lucide="upload" class="h-4 w-4"></i>
+          Import Transactions
+        </button>
+      </div>
     </div>
-    
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Filters -->
-        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6">
-            <div class="flex flex-wrap gap-4">
-                <input type="text" placeholder="Search transactions..." class="border border-gray-300 rounded-lg px-4 py-2 w-64">
-                <select class="border border-gray-300 rounded-lg px-4 py-2">
-                    <option>All Categories</option>
-                    <option>Uncategorized</option>
-                    <option>Categorized</option>
-                </select>
-                <select class="border border-gray-300 rounded-lg px-4 py-2">
-                    <option>All Status</option>
-                    <option>Pending Review</option>
-                    <option>Approved</option>
-                </select>
-            </div>
-        </div>
-        
-        <!-- Transactions Table -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                            No transactions yet. Connect your QuickBooks account to get started.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+  </div>
+
+  <!-- Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Filter Bar -->
+    <div class="bk-card mb-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="text-lg font-semibold text-gray-900 mr-auto">All Transactions</h2>
+        <input type="text" placeholder="Search..." class="bk-input min-w-[240px]" id="searchTxn" />
+        <select class="bk-input" id="filterCategory">
+          <option value="">All Categories</option>
+          <option value="uncategorized">Uncategorized</option>
+          <option value="categorized">Categorized</option>
+        </select>
+        <select class="bk-input" id="filterStatus">
+          <option value="">All Status</option>
+          <option value="needs_review">Needs Review</option>
+          <option value="approved">Approved</option>
+        </select>
+        <button class="bk-btn-secondary" onclick="applyFilters()">
+          <i data-lucide="filter" class="h-4 w-4"></i>
+          Apply
+        </button>
+      </div>
     </div>
+
+    <!-- Table -->
+    <div class="bk-card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="bk-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Vendor/Customer</th>
+              <th class="text-right">Amount</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="txnTbody">
+            {% for txn in transactions %}
+            <tr>
+              <td class="text-sm text-gray-700">{{ txn.transaction_date.strftime('%b %d, %Y') if txn.transaction_date else '-' }}</td>
+              <td class="font-medium">{{ txn.description or '-' }}</td>
+              <td class="text-gray-600">{{ txn.vendor_name or txn.customer_name or '-' }}</td>
+              <td class="text-right tabular-nums {% if txn.amount > 0 %}text-green-600{% else %}text-red-600{% endif %} font-medium">
+                {% if txn.amount > 0 %}+{% endif %}${{ "%.2f"|format(txn.amount|abs) }}
+              </td>
+              <td class="text-gray-700">{{ txn.category or 'Uncategorized' }}</td>
+              <td>
+                {% if txn.category %}
+                  <span class="bk-badge bk-badge-success">Categorized</span>
+                {% else %}
+                  <span class="bk-badge bk-badge-warning">Needs Review</span>
+                {% endif %}
+              </td>
+              <td class="text-right">
+                <a href="#" class="bk-btn-secondary text-xs">View</a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center py-12">
+                <div class="inline-flex p-4 rounded-full mb-3" style="background: var(--bk-primary-light);">
+                  <i data-lucide="receipt" class="h-8 w-8" style="color: var(--bk-primary);"></i>
+                </div>
+                <p class="text-gray-700 font-medium mb-1">No transactions yet</p>
+                <p class="text-gray-500 text-sm mb-4">Sync from QuickBooks or import a CSV to get started</p>
+                <div class="flex gap-2 justify-center">
+                  <button class="bk-btn-primary" onclick="window.location.href='/quickbooks/connect'">
+                    <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+                    Connect QuickBooks
+                  </button>
+                  <button class="bk-btn-secondary">
+                    <i data-lucide="upload" class="h-4 w-4"></i>
+                    Upload CSV
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+function applyFilters() {
+  const search = document.getElementById('searchTxn').value;
+  const category = document.getElementById('filterCategory').value;
+  const status = document.getElementById('filterStatus').value;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (category) params.set('category', category);
+  if (status) params.set('status', status);
+  window.location.search = params.toString();
+}
+document.getElementById('searchTxn')?.addEventListener('keypress', e => {
+  if (e.key === 'Enter') applyFilters();
+});
+</script>
 {% endblock %}

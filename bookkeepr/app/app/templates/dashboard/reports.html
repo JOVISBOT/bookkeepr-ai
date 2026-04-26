@@ -1,0 +1,609 @@
+{% extends "base.html" %}
+
+{% block title %}Financial Reports{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+  <!-- Page Header -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Financial Reports</h1>
+          <p class="text-gray-600 mt-1">Live insights, custom filters, instant PDF export</p>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <span class="bk-badge bk-badge-success">
+            <span class="w-2 h-2 rounded-full bg-current mr-1.5"></span>
+            Live data
+          </span>
+          <span class="text-gray-500" id="lastUpdated">Updated just now</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar (sticky, expandable) -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
+      <!-- Row 1: Primary filters always visible -->
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex-shrink-0">
+          <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Report</label>
+          <select id="reportType" class="bk-input min-w-[180px]">
+            <option value="pnl">Profit & Loss</option>
+            <option value="balance">Balance Sheet</option>
+            <option value="cashflow">Cash Flow</option>
+            <option value="trial-balance">Trial Balance</option>
+            <option value="ledger">General Ledger</option>
+            <option value="ai-insights">AI Insights (Beta)</option>
+            <option value="ar-aging">A/R Aging</option>
+            <option value="ap-aging">A/P Aging</option>
+            <option value="vendor-summary">Vendor Summary</option>
+            <option value="customer-summary">Customer Summary</option>
+            <option value="tax-summary">Tax-Ready Summary</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Period</label>
+          <select id="filterPeriod" class="bk-input min-w-[140px]">
+            <option value="this_month">This Month</option>
+            <option value="last_month">Last Month</option>
+            <option value="this_quarter">This Quarter</option>
+            <option value="last_quarter">Last Quarter</option>
+            <option value="this_year" selected>This Year</option>
+            <option value="last_year">Last Year</option>
+            <option value="ytd">Year to Date</option>
+            <option value="last_30">Last 30 Days</option>
+            <option value="last_90">Last 90 Days</option>
+            <option value="custom">Custom Range...</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Compare</label>
+          <select id="filterCompare" class="bk-input min-w-[150px]">
+            <option value="none">No comparison</option>
+            <option value="prev_period">vs Prev Period</option>
+            <option value="prev_year">vs Last Year</option>
+            <option value="budget">vs Budget</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Category</label>
+          <select id="filterCategory" class="bk-input min-w-[140px]">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Account</label>
+          <select id="filterAccount" class="bk-input min-w-[140px]">
+            <option value="">All Accounts</option>
+          </select>
+        </div>
+        <div id="customDates" class="flex gap-2 hidden">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">From</label>
+            <input type="date" id="filterStart" class="bk-input" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">To</label>
+            <input type="date" id="filterEnd" class="bk-input" />
+          </div>
+        </div>
+        <div class="ml-auto flex gap-2">
+          <button onclick="toggleAdvanced()" class="bk-btn-secondary text-sm" id="advBtn">
+            <i data-lucide="sliders" class="h-4 w-4"></i>
+            More Filters
+          </button>
+          <button onclick="generateReport()" class="bk-btn-primary text-sm">
+            <i data-lucide="play" class="h-4 w-4"></i>
+            Run Report
+          </button>
+          <button onclick="resetFilters()" class="bk-btn-secondary text-sm">
+            <i data-lucide="x" class="h-4 w-4"></i>
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2: Advanced filters (toggle) -->
+      <div id="advancedFilters" class="hidden mt-4 pt-4 border-t border-gray-200">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Vendor</label>
+            <input type="text" id="filterVendor" placeholder="Any vendor" class="bk-input w-full" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Type</label>
+            <select id="filterTxnType" class="bk-input w-full">
+              <option value="">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              <option value="transfer">Transfer</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Status</label>
+            <select id="filterStatus" class="bk-input w-full">
+              <option value="">All</option>
+              <option value="categorized">Categorized</option>
+              <option value="uncategorized">Uncategorized</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="pending">Pending Review</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Amount Min</label>
+            <input type="number" id="filterAmtMin" placeholder="0" class="bk-input w-full" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Amount Max</label>
+            <input type="number" id="filterAmtMax" placeholder="∞" class="bk-input w-full" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Search</label>
+            <input type="text" id="filterSearch" placeholder="Description..." class="bk-input w-full" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Group By</label>
+            <select id="filterGroupBy" class="bk-input w-full">
+              <option value="category">Category</option>
+              <option value="month">Month</option>
+              <option value="quarter">Quarter</option>
+              <option value="vendor">Vendor</option>
+              <option value="account">Account</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Sort By</label>
+            <select id="filterSort" class="bk-input w-full">
+              <option value="date_desc">Date (Newest)</option>
+              <option value="date_asc">Date (Oldest)</option>
+              <option value="amount_desc">Amount (High)</option>
+              <option value="amount_asc">Amount (Low)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Currency</label>
+            <select id="filterCurrency" class="bk-input w-full">
+              <option value="USD">USD</option>
+              <option value="CAD">CAD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Container -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="quickStats">
+      <div class="bk-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase text-gray-500 tracking-wide">Revenue</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1" id="statRevenue">$0</div>
+          </div>
+          <div class="p-2 rounded-lg" style="background: var(--bk-primary-light); color: var(--bk-primary);">
+            <i data-lucide="trending-up" class="h-5 w-5"></i>
+          </div>
+        </div>
+        <div class="text-xs text-gray-500 mt-2" id="statRevenueChange">—</div>
+      </div>
+      <div class="bk-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase text-gray-500 tracking-wide">Expenses</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1" id="statExpenses">$0</div>
+          </div>
+          <div class="p-2 rounded-lg" style="background: #fee2e2; color: #ef4444;">
+            <i data-lucide="trending-down" class="h-5 w-5"></i>
+          </div>
+        </div>
+        <div class="text-xs text-gray-500 mt-2" id="statExpensesChange">—</div>
+      </div>
+      <div class="bk-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase text-gray-500 tracking-wide">Net Income</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1" id="statNet">$0</div>
+          </div>
+          <div class="p-2 rounded-lg" style="background: #dcfce7; color: #16a34a;">
+            <i data-lucide="dollar-sign" class="h-5 w-5"></i>
+          </div>
+        </div>
+        <div class="text-xs text-gray-500 mt-2" id="statNetMargin">—</div>
+      </div>
+      <div class="bk-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase text-gray-500 tracking-wide">Transactions</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1" id="statTxns">0</div>
+          </div>
+          <div class="p-2 rounded-lg" style="background: #ede9fe; color: #7c3aed;">
+            <i data-lucide="receipt" class="h-5 w-5"></i>
+          </div>
+        </div>
+        <div class="text-xs text-gray-500 mt-2" id="statTxnsLabel">in period</div>
+      </div>
+    </div>
+
+    <!-- Report Body -->
+    <div class="bk-card">
+      <div class="flex items-center justify-between mb-4 no-print">
+        <div>
+          <h2 id="reportTitle" class="text-xl font-semibold text-gray-900">Profit & Loss Statement</h2>
+          <p id="reportSubtitle" class="text-sm text-gray-500 mt-1">Run a report to see live data</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="downloadReport('pdf')" class="bk-btn-primary text-sm">
+            <i data-lucide="file-down" class="h-4 w-4"></i>
+            Download PDF
+          </button>
+          <button onclick="downloadReport('excel')" class="bk-btn-secondary text-sm">
+            <i data-lucide="file-spreadsheet" class="h-4 w-4"></i>
+            Excel
+          </button>
+          <button onclick="downloadReport('csv')" class="bk-btn-secondary text-sm">
+            <i data-lucide="file-text" class="h-4 w-4"></i>
+            CSV
+          </button>
+          <button onclick="window.print()" class="bk-btn-secondary text-sm">
+            <i data-lucide="printer" class="h-4 w-4"></i>
+            Print
+          </button>
+        </div>
+      </div>
+      <div id="reportBody">
+        <div class="text-center py-16">
+          <div class="inline-flex p-4 rounded-full mb-4" style="background: var(--bk-primary-light);">
+            <i data-lucide="bar-chart-3" class="h-8 w-8" style="color: var(--bk-primary);"></i>
+          </div>
+          <p class="text-gray-700 font-medium">Choose a report and click "Run Report"</p>
+          <p class="text-gray-500 text-sm mt-1">Apply filters above to drill into your data</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tip card -->
+    <div class="mt-6 p-4 rounded-lg flex items-start gap-3" style="background: var(--bk-primary-light); border-left: 4px solid var(--bk-primary);">
+      <i data-lucide="lightbulb" class="h-5 w-5 mt-0.5" style="color: var(--bk-primary);"></i>
+      <div class="text-sm">
+        <strong>Tip:</strong> Use the <em>More Filters</em> button to slice by vendor, amount range, or status. All reports support PDF, Excel, and CSV download with branded company header.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let categoriesLoaded = false;
+
+function getFilters() {
+  const period = document.getElementById('filterPeriod').value;
+  const today = new Date();
+  let start = null, end = null;
+
+  switch (period) {
+    case 'this_month': start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; break;
+    case 'last_month': start = new Date(today.getFullYear(), today.getMonth() - 1, 1); end = new Date(today.getFullYear(), today.getMonth(), 0); break;
+    case 'this_quarter': const q = Math.floor(today.getMonth() / 3); start = new Date(today.getFullYear(), q * 3, 1); end = today; break;
+    case 'last_quarter': const lq = Math.floor(today.getMonth() / 3) - 1; start = new Date(today.getFullYear(), lq * 3, 1); end = new Date(today.getFullYear(), (lq + 1) * 3, 0); break;
+    case 'this_year': start = new Date(today.getFullYear(), 0, 1); end = today; break;
+    case 'last_year': start = new Date(today.getFullYear() - 1, 0, 1); end = new Date(today.getFullYear() - 1, 11, 31); break;
+    case 'ytd': start = new Date(today.getFullYear(), 0, 1); end = today; break;
+    case 'last_30': start = new Date(today.getTime() - 30*24*60*60*1000); end = today; break;
+    case 'last_90': start = new Date(today.getTime() - 90*24*60*60*1000); end = today; break;
+    case 'custom':
+      start = document.getElementById('filterStart').value ? new Date(document.getElementById('filterStart').value) : null;
+      end = document.getElementById('filterEnd').value ? new Date(document.getElementById('filterEnd').value) : null;
+      break;
+  }
+  const fmt = d => d ? d.toISOString().split('T')[0] : '';
+
+  return {
+    start_date: fmt(start),
+    end_date: fmt(end),
+    category: document.getElementById('filterCategory').value,
+    account: document.getElementById('filterAccount').value,
+    vendor: document.getElementById('filterVendor').value,
+    type: document.getElementById('filterTxnType').value,
+    status: document.getElementById('filterStatus').value,
+    amount_min: document.getElementById('filterAmtMin').value,
+    amount_max: document.getElementById('filterAmtMax').value,
+    search: document.getElementById('filterSearch').value,
+    group_by: document.getElementById('filterGroupBy').value,
+    sort: document.getElementById('filterSort').value,
+    compare: document.getElementById('filterCompare').value,
+    currency: document.getElementById('filterCurrency').value,
+  };
+}
+
+function toggleAdvanced() {
+  const adv = document.getElementById('advancedFilters');
+  const btn = document.getElementById('advBtn');
+  if (adv.classList.contains('hidden')) {
+    adv.classList.remove('hidden');
+    btn.innerHTML = '<i data-lucide="chevron-up" class="h-4 w-4"></i> Hide Filters';
+  } else {
+    adv.classList.add('hidden');
+    btn.innerHTML = '<i data-lucide="sliders" class="h-4 w-4"></i> More Filters';
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function resetFilters() {
+  document.getElementById('filterPeriod').value = 'this_year';
+  document.getElementById('filterCategory').value = '';
+  document.getElementById('filterAccount').value = '';
+  document.getElementById('filterVendor').value = '';
+  document.getElementById('filterTxnType').value = '';
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('filterAmtMin').value = '';
+  document.getElementById('filterAmtMax').value = '';
+  document.getElementById('filterSearch').value = '';
+  document.getElementById('filterGroupBy').value = 'category';
+  document.getElementById('filterSort').value = 'date_desc';
+  document.getElementById('filterCompare').value = 'none';
+  document.getElementById('filterCurrency').value = 'USD';
+  document.getElementById('customDates').classList.add('hidden');
+}
+
+document.getElementById('filterPeriod').addEventListener('change', e => {
+  document.getElementById('customDates').classList.toggle('hidden', e.target.value !== 'custom');
+});
+
+const REPORT_TITLES = {
+  'pnl': 'Profit & Loss Statement',
+  'balance': 'Balance Sheet',
+  'cashflow': 'Cash Flow Statement',
+  'trial-balance': 'Trial Balance',
+  'ledger': 'General Ledger',
+  'ai-insights': 'AI Insights Report',
+  'ar-aging': 'A/R Aging',
+  'ap-aging': 'A/P Aging',
+  'vendor-summary': 'Vendor Summary',
+  'customer-summary': 'Customer Summary',
+  'tax-summary': 'Tax-Ready Summary',
+};
+
+async function generateReport() {
+  const type = document.getElementById('reportType').value;
+  const filters = getFilters();
+  const body = document.getElementById('reportBody');
+  
+  document.getElementById('reportTitle').textContent = REPORT_TITLES[type] || 'Report';
+  document.getElementById('reportSubtitle').textContent = `Period: ${filters.start_date || 'All time'} → ${filters.end_date || 'Now'}`;
+  document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  
+  body.innerHTML = '<div class="text-center py-16"><div class="bk-spinner mx-auto"></div><p class="text-gray-500 mt-3">Loading report...</p></div>';
+
+  try {
+    const params = new URLSearchParams(Object.entries(filters).filter(([_,v])=>v));
+    const apiPath = type === 'ai-insights' ? 'pnl' : type;
+    const resp = await fetch(`/api/v1/reports/${apiPath}?${params}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    body.innerHTML = renderReport(type, data);
+    updateStats(data);
+    if (window.lucide) lucide.createIcons();
+  } catch (e) {
+    body.innerHTML = `<div class="text-red-600 p-4 bg-red-50 rounded-lg">⚠ Error: ${e.message}</div>`;
+  }
+}
+
+function updateStats(data) {
+  const t = data.totals || {};
+  document.getElementById('statRevenue').textContent = '$' + (t.revenue || 0).toLocaleString();
+  document.getElementById('statExpenses').textContent = '$' + (t.expenses || 0).toLocaleString();
+  document.getElementById('statNet').textContent = '$' + (t.net_income || 0).toLocaleString();
+  document.getElementById('statTxns').textContent = (t.transaction_count || data.line_items?.length || 0);
+  
+  if (t.revenue && t.net_income) {
+    const margin = ((t.net_income / t.revenue) * 100).toFixed(1);
+    document.getElementById('statNetMargin').textContent = `${margin}% margin`;
+  }
+}
+
+function renderReport(type, data) {
+  if (!data || data.error) return `<div class="text-gray-500 p-8 text-center">${data?.error || 'No data'}</div>`;
+  
+  // Balance Sheet
+  if (type === 'balance') {
+    const summary = data.summary || {};
+    let html = `
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="p-4 rounded-lg" style="background: var(--bk-primary-light);">
+          <div class="text-xs uppercase text-gray-500">Total Assets</div>
+          <div class="text-2xl font-bold text-gray-900">$${(summary.total_assets || 0).toLocaleString()}</div>
+        </div>
+        <div class="p-4 rounded-lg bg-red-50">
+          <div class="text-xs uppercase text-gray-500">Total Liabilities</div>
+          <div class="text-2xl font-bold text-gray-900">$${(summary.total_liabilities || 0).toLocaleString()}</div>
+        </div>
+        <div class="p-4 rounded-lg bg-green-50">
+          <div class="text-xs uppercase text-gray-500">Total Equity</div>
+          <div class="text-2xl font-bold text-gray-900">$${(summary.total_equity || 0).toLocaleString()}</div>
+        </div>
+      </div>
+    `;
+    
+    if (data.assets?.length) {
+      html += `<h3 class="font-semibold mt-6 mb-3 text-gray-900">Assets</h3>${renderTable(data.assets, 'green')}`;
+    }
+    if (data.liabilities?.length) {
+      html += `<h3 class="font-semibold mt-6 mb-3 text-gray-900">Liabilities</h3>${renderTable(data.liabilities, 'red')}`;
+    }
+    if (data.equity?.length) {
+      html += `<h3 class="font-semibold mt-6 mb-3 text-gray-900">Equity</h3>${renderTable(data.equity, 'green')}`;
+    }
+    
+    if (!data.assets?.length && !data.liabilities?.length && !data.equity?.length) {
+      html += `
+        <div class="text-center py-12">
+          <div class="inline-flex p-4 rounded-full mb-3" style="background: var(--bk-primary-light);">
+            <i data-lucide="layout-dashboard" class="h-8 w-8" style="color: var(--bk-primary);"></i>
+          </div>
+          <p class="text-gray-700 font-medium mb-1">No balance data yet</p>
+          <p class="text-gray-500 text-sm">Connect QuickBooks or import transactions to populate this report</p>
+        </div>`;
+    }
+    return html;
+  }
+  
+  // Cash Flow
+  if (type === 'cashflow') {
+    const items = data.periods || data.line_items || [];
+    if (!items.length) return emptyState('Cash Flow', 'wallet');
+    let rows = items.map(p => `
+      <tr class="hover:bg-gray-50">
+        <td class="font-medium">${p.period || p.name || '—'}</td>
+        <td class="text-right tabular-nums text-green-600">$${(p.inflow || 0).toLocaleString()}</td>
+        <td class="text-right tabular-nums text-red-600">$${(p.outflow || 0).toLocaleString()}</td>
+        <td class="text-right tabular-nums font-semibold">$${(p.net || 0).toLocaleString()}</td>
+      </tr>
+    `).join('');
+    return `<table class="bk-table"><thead><tr><th>Period</th><th class="text-right">Inflow</th><th class="text-right">Outflow</th><th class="text-right">Net</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  
+  // P&L (default)
+  const items = data.line_items || data.items || [];
+  if (!items.length && type === 'pnl') {
+    return emptyState('No P&L data', 'trending-up');
+  }
+  
+  const income = items.filter(i => (i.amount || 0) > 0);
+  const expenses = items.filter(i => (i.amount || 0) < 0);
+  
+  let html = '';
+  
+  if (income.length) {
+    html += '<h3 class="font-semibold text-gray-900 mb-3 mt-2">Income</h3>';
+    html += renderTable(income, 'green');
+  }
+  
+  if (expenses.length) {
+    html += '<h3 class="font-semibold text-gray-900 mb-3 mt-6">Expenses</h3>';
+    html += renderTable(expenses.map(i => ({...i, amount: Math.abs(i.amount)})), 'red');
+  }
+  
+  if (!html) {
+    return emptyState('No transactions in this period', 'inbox');
+  }
+  
+  return html;
+}
+
+function emptyState(message, icon) {
+  return `
+    <div class="text-center py-12">
+      <div class="inline-flex p-4 rounded-full mb-3" style="background: var(--bk-primary-light);">
+        <i data-lucide="${icon}" class="h-8 w-8" style="color: var(--bk-primary);"></i>
+      </div>
+      <p class="text-gray-700 font-medium mb-1">${message}</p>
+      <p class="text-gray-500 text-sm">Try changing the period or adjusting filters</p>
+    </div>`;
+}
+
+function renderTable(items, accent) {
+  const total = items.reduce((s, i) => s + (i.amount || 0), 0);
+  const accentColor = accent === 'green' ? 'text-green-600' : 'text-red-600';
+  let rows = items.map(i => `
+    <tr class="hover:bg-gray-50">
+      <td class="font-medium">${i.category || i.name || i.account_name || '—'}</td>
+      <td class="text-right tabular-nums ${accentColor} font-medium">$${(i.amount || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+    </tr>
+  `).join('');
+  return `
+    <div class="overflow-x-auto">
+      <table class="bk-table">
+        <thead>
+          <tr><th>Account</th><th class="text-right">Amount</th></tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr class="bg-gray-50 font-semibold">
+            <td>Total</td>
+            <td class="text-right tabular-nums">$${total.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function downloadReport(format) {
+  const type = document.getElementById('reportType').value;
+  const filters = getFilters();
+  const params = new URLSearchParams({...filters, format});
+  const apiPath = type === 'ai-insights' ? 'pnl' : type;
+  
+  const toast = document.createElement('div');
+  toast.className = 'bk-toast';
+  toast.innerHTML = `<div class="flex items-center gap-2"><div class="bk-spinner"></div><span>Generating ${format.toUpperCase()}...</span></div>`;
+  document.body.appendChild(toast);
+  
+  try {
+    const resp = await fetch(`/api/v1/reports/download/${apiPath}?${params}`);
+    if (!resp.ok) throw new Error('Download failed');
+    const blob = await resp.blob();
+    const dlUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = dlUrl;
+    a.download = `${type}_${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(dlUrl);
+    toast.innerHTML = `<div class="flex items-center gap-2"><span style="color: var(--bk-success)">✓</span><span>Downloaded ${format.toUpperCase()}</span></div>`;
+  } catch (e) {
+    toast.innerHTML = `<div class="text-red-600">Failed: ${e.message}</div>`;
+  }
+  setTimeout(() => toast.remove(), 3000);
+}
+
+async function loadCategories() {
+  if (categoriesLoaded) return;
+  try {
+    // Categories
+    const catResp = await fetch('/api/v1/categories');
+    if (catResp.ok) {
+      const catData = await catResp.json();
+      const catSel = document.getElementById('filterCategory');
+      (catData.categories || []).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        catSel.appendChild(opt);
+      });
+    }
+    
+    // Accounts
+    const accResp = await fetch('/api/v1/accounts');
+    if (accResp.ok) {
+      const accData = await accResp.json();
+      const accSel = document.getElementById('filterAccount');
+      (accData.accounts || []).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        accSel.appendChild(opt);
+      });
+    }
+    
+    categoriesLoaded = true;
+  } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadCategories();
+  if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

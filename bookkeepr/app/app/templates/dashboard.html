@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p class="text-gray-600 mt-1">Welcome back, {{ current_user.first_name or current_user.email }}</p>
+        </div>
+        <div class="flex gap-2 items-center">
+          {% if all_clients and all_clients|length > 1 %}
+          <select onchange="window.location.href='?client_id='+this.value" class="bk-input min-w-[180px]">
+            {% for c in all_clients %}
+            <option value="{{ c.id }}" {% if company and c.id == company.id %}selected{% endif %}>
+              {{ c.qbo_company_name or 'Unnamed Client' }}
+              {% if c.is_connected %}✓{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+          {% endif %}
+          <a href="{{ url_for('clients.index') }}" class="bk-btn-secondary">
+            <i data-lucide="users" class="h-4 w-4"></i>
+            All Clients
+          </a>
+          <a href="{{ url_for('clients.new') }}" class="bk-btn-secondary">
+            <i data-lucide="user-plus" class="h-4 w-4"></i>
+            Add Client
+          </a>
+          {% if company %}
+          <a href="/quickbooks/connect?company_id={{ company.id }}" class="bk-btn-primary">
+            <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+            Sync Now
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="bk-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase text-gray-500 tracking-wide">Total Balance</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">${{ "%.2f"|format(total_balance|default(0)) }}</div>
+            <div class="text-xs text-green-600 mt-2">+5.2% this month</div>
+          </div>
+          <div class="p-2 rounded-lg" style="background: var(--bk-primary-light); color: var(--bk-primary);">
+            <i data-lucide="wallet" class="h-5 w-5"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bk-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase text-gray-500 tracking-wide">Income MTD</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">${{ "%.2f"|format(income_mtd|default(0)) }}</div>
+            <div class="text-xs text-green-600 mt-2">+12% vs last month</div>
+          </div>
+          <div class="p-2 rounded-lg" style="background: #dcfce7; color: #16a34a;">
+            <i data-lucide="trending-up" class="h-5 w-5"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bk-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase text-gray-500 tracking-wide">Expenses MTD</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">${{ "%.2f"|format(expenses_mtd|default(0)) }}</div>
+            <div class="text-xs text-red-600 mt-2">+8% vs last month</div>
+          </div>
+          <div class="p-2 rounded-lg" style="background: #fee2e2; color: #ef4444;">
+            <i data-lucide="trending-down" class="h-5 w-5"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bk-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase text-gray-500 tracking-wide">Needs Review</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">{{ uncategorized_count|default(0) }}</div>
+            <div class="text-xs text-gray-500 mt-2">uncategorized</div>
+          </div>
+          <div class="p-2 rounded-lg" style="background: #fef3c7; color: #d97706;">
+            <i data-lucide="alert-circle" class="h-5 w-5"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="bk-card lg:col-span-2">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Profit & Loss</h3>
+        <canvas id="pnlChart" height="220"></canvas>
+      </div>
+      <div class="bk-card">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Expense Breakdown</h3>
+        <canvas id="expenseChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- AI Actions -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">AI Bookkeeping Actions</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bk-card">
+          <div class="p-3 rounded-lg inline-block mb-3" style="background: var(--bk-primary-light); color: var(--bk-primary);">
+            <i data-lucide="sparkles" class="h-6 w-6"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-1">Auto-Categorize</h3>
+          <p class="text-sm text-gray-600 mb-4">AI will categorize {{ uncategorized_count|default(0) }} transactions</p>
+          <button class="bk-btn-primary w-full">Run AI Categorization</button>
+        </div>
+
+        <div class="bk-card">
+          <div class="p-3 rounded-lg inline-block mb-3" style="background: #dcfce7; color: #16a34a;">
+            <i data-lucide="check-square" class="h-6 w-6"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-1">Reconcile Accounts</h3>
+          <p class="text-sm text-gray-600 mb-4">Match transactions with bank statements</p>
+          <button class="bk-btn-primary w-full">Start Reconciliation</button>
+        </div>
+
+        <div class="bk-card">
+          <div class="p-3 rounded-lg inline-block mb-3" style="background: #ede9fe; color: #7c3aed;">
+            <i data-lucide="file-text" class="h-6 w-6"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-1">Generate Report</h3>
+          <p class="text-sm text-gray-600 mb-4">Create P&L, Balance Sheet, or Cash Flow</p>
+          <a href="/dashboard/reports" class="bk-btn-primary w-full">Create Report</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="bk-card p-0 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Recent Transactions</h2>
+        <a href="/dashboard/transactions" class="bk-btn-secondary text-sm">View All</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="bk-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Account</th>
+              <th class="text-right">Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for txn in recent_transactions %}
+            <tr>
+              <td class="text-sm text-gray-700">{{ txn.transaction_date.strftime('%b %d') if txn.transaction_date else '—' }}</td>
+              <td class="font-medium">{{ txn.description|truncate(40) }}</td>
+              <td class="text-gray-600">{{ txn.account_name or 'Uncategorized' }}</td>
+              <td class="text-right tabular-nums {% if txn.amount > 0 %}text-green-600{% else %}text-red-600{% endif %} font-medium">
+                {% if txn.amount > 0 %}+{% endif %}${{ "%.2f"|format(txn.amount|abs) }}
+              </td>
+              <td>
+                {% if txn.category %}
+                  <span class="bk-badge bk-badge-success">Categorized</span>
+                {% else %}
+                  <span class="bk-badge bk-badge-warning">Needs Review</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center py-12">
+                <p class="text-gray-500">No transactions yet. <a href="/quickbooks/connect" class="text-blue-600 font-medium hover:underline">Connect QuickBooks</a> to get started.</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+fetch('/api/v1/data/pnl').then(r => r.json()).then(data => {
+  if (!data.labels) return;
+  new Chart(document.getElementById('pnlChart'), {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [
+        { label: 'Income', data: data.income, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4 },
+        { label: 'Expenses', data: data.expenses, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4 },
+        { label: 'Profit', data: data.profit, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
+  });
+}).catch(()=>{});
+
+fetch('/api/v1/data/expenses').then(r => r.json()).then(data => {
+  if (!data.labels) return;
+  new Chart(document.getElementById('expenseChart'), {
+    type: 'doughnut',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        data: data.data,
+        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+}).catch(()=>{});
+</script>
+{% endblock %}

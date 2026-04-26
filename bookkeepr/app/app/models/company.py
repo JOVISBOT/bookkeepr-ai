@@ -11,6 +11,12 @@ class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     
+    # Multi-tenant isolation
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=True, index=True)
+    
+    # Active/inactive (soft delete)
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    
     # QuickBooks Info
     qbo_realm_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
     qbo_company_name = db.Column(db.String(255))

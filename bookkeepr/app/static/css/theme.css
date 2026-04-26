@@ -1,0 +1,204 @@
+/* BookKeepr AI - Unified Design System
+ * Single source of truth for colors, spacing, typography
+ * Better-than-QBO professional look
+ */
+
+:root {
+  /* Brand Colors - Trust + Money */
+  --bk-primary: #2563eb;          /* blue-600 */
+  --bk-primary-hover: #1d4ed8;    /* blue-700 */
+  --bk-primary-light: #dbeafe;    /* blue-100 */
+  --bk-primary-dark: #1e3a8a;     /* blue-900 */
+  
+  /* Status Colors */
+  --bk-success: #10b981;          /* emerald-500 */
+  --bk-success-bg: #d1fae5;       /* emerald-100 */
+  --bk-warning: #f59e0b;          /* amber-500 */
+  --bk-warning-bg: #fef3c7;       /* amber-100 */
+  --bk-danger: #ef4444;           /* red-500 */
+  --bk-danger-bg: #fee2e2;        /* red-100 */
+  --bk-info: #06b6d4;             /* cyan-500 */
+  
+  /* Neutrals */
+  --bk-gray-50: #f9fafb;
+  --bk-gray-100: #f3f4f6;
+  --bk-gray-200: #e5e7eb;
+  --bk-gray-300: #d1d5db;
+  --bk-gray-400: #9ca3af;
+  --bk-gray-500: #6b7280;
+  --bk-gray-600: #4b5563;
+  --bk-gray-700: #374151;
+  --bk-gray-800: #1f2937;
+  --bk-gray-900: #111827;
+  
+  /* Layout */
+  --bk-radius: 8px;
+  --bk-radius-lg: 12px;
+  --bk-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --bk-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --bk-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  
+  /* Typography */
+  --bk-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bk-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;
+}
+
+/* Override Tailwind primary colors to use our brand */
+.bg-emerald-500, .bg-emerald-600, .bg-emerald-700 { 
+  background-color: var(--bk-primary) !important; 
+}
+.bg-emerald-700:hover { background-color: var(--bk-primary-hover) !important; }
+.text-emerald-500, .text-emerald-600 { color: var(--bk-primary) !important; }
+.border-emerald-500, .border-emerald-600 { border-color: var(--bk-primary) !important; }
+
+/* Polish: Smooth transitions */
+button, a, input, select, textarea {
+  transition: all 0.15s ease-in-out;
+}
+
+/* Better focus states */
+*:focus-visible {
+  outline: 2px solid var(--bk-primary);
+  outline-offset: 2px;
+}
+
+/* Reusable utility components */
+.bk-card {
+  background: white;
+  border-radius: var(--bk-radius-lg);
+  box-shadow: var(--bk-shadow);
+  padding: 1.5rem;
+}
+
+.bk-btn-primary {
+  background: var(--bk-primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: var(--bk-radius);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+.bk-btn-primary:hover {
+  background: var(--bk-primary-hover);
+}
+
+.bk-btn-secondary {
+  background: white;
+  color: var(--bk-gray-700);
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--bk-gray-300);
+  border-radius: var(--bk-radius);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.bk-btn-secondary:hover {
+  background: var(--bk-gray-50);
+  border-color: var(--bk-gray-400);
+}
+
+.bk-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.bk-badge-success { background: var(--bk-success-bg); color: var(--bk-success); }
+.bk-badge-warning { background: var(--bk-warning-bg); color: var(--bk-warning); }
+.bk-badge-danger { background: var(--bk-danger-bg); color: var(--bk-danger); }
+.bk-badge-info { background: var(--bk-primary-light); color: var(--bk-primary); }
+
+/* Tables - QBO-killer style */
+.bk-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bk-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--bk-gray-500);
+  background: var(--bk-gray-50);
+  border-bottom: 1px solid var(--bk-gray-200);
+}
+
+.bk-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--bk-gray-100);
+  color: var(--bk-gray-900);
+}
+
+.bk-table tr:hover td {
+  background: var(--bk-gray-50);
+}
+
+/* Form inputs - consistent styling */
+.bk-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--bk-gray-300);
+  border-radius: var(--bk-radius);
+  font-size: 0.875rem;
+  background: white;
+}
+
+.bk-input:focus {
+  border-color: var(--bk-primary);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+  outline: none;
+}
+
+/* Loading spinner */
+@keyframes bk-spin {
+  to { transform: rotate(360deg); }
+}
+
+.bk-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--bk-gray-200);
+  border-top-color: var(--bk-primary);
+  border-radius: 50%;
+  animation: bk-spin 0.6s linear infinite;
+}
+
+/* Toast notifications */
+.bk-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--bk-radius);
+  box-shadow: var(--bk-shadow-lg);
+  background: white;
+  border-left: 4px solid var(--bk-primary);
+  animation: slide-in 0.3s ease-out;
+  z-index: 50;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Print styles for PDF reports */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .bk-card { box-shadow: none; border: 1px solid #ccc; }
+}

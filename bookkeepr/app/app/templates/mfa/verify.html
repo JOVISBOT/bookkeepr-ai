@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Verify - BookKeepr AI{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow p-8">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Two-Factor Authentication</h1>
+            <p class="text-sm text-gray-600 mb-6">Enter the 6-digit code from your authenticator app.</p>
+            <p class="text-xs text-gray-500 mb-4">Account: {{ email }}</p>
+
+            <form method="POST">
+                <input type="text" name="token" required maxlength="6" pattern="[0-9]{6}" autofocus
+                       placeholder="000000"
+                       autocomplete="one-time-code"
+                       class="w-full text-center text-2xl tracking-widest rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <button type="submit"
+                        class="mt-4 w-full inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                    Verify
+                </button>
+            </form>
+            
+            <p class="mt-4 text-center text-sm text-gray-500">
+                <a href="{{ url_for('auth.login') }}" class="text-blue-600 hover:text-blue-800">Cancel and login again</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

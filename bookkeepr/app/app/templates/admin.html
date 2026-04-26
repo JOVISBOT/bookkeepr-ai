@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen">
+    
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                    <p class="text-gray-600 mt-1">System overview and management</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                        System Online
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center">
+                    <div class="p-3 bg-blue-100 rounded-lg">
+                        <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Total Users</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.total_users }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center">
+                    <div class="p-3 bg-blue-100 rounded-lg">
+                        <i data-lucide="building" class="h-6 w-6 text-blue-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Companies</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.total_companies }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center">
+                    <div class="p-3 bg-purple-100 rounded-lg">
+                        <i data-lucide="receipt" class="h-6 w-6 text-purple-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Total Transactions</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.total_transactions }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center">
+                    <div class="p-3 bg-amber-100 rounded-lg">
+                        <i data-lucide="alert-circle" class="h-6 w-6 text-amber-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Pending Reviews</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.pending_reviews }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- AI Accuracy Chart -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">AI Accuracy Over Time</h3>
+                <div id="accuracy-chart" class="h-64">
+                    {% if ai_accuracy %}
+                    <div class="space-y-3">
+                        {% for day in ai_accuracy %}
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-600 w-24">{{ day.date }}</span>
+                            <div class="flex-grow bg-gray-200 rounded-full h-4 mx-3">
+                                <div class="bg-blue-500 h-4 rounded-full" style="width: {{ (day.approved / day.total * 100)|round(0) if day.total > 0 else 0 }}%"></div>
+                            </div>
+                            <span class="text-sm font-medium w-16 text-right">{{ (day.approved / day.total * 100)|round(1) if day.total > 0 else 0 }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500 text-center py-8">No accuracy data yet</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Daily Transactions -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Daily Transactions (30 Days)</h3>
+                <div class="h-64 overflow-y-auto">
+                    {% if daily_counts %}
+                    <div class="space-y-2">
+                        {% for day in daily_counts %}
+                        <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                            <span class="text-sm text-gray-600">{{ day.date }}</span>
+                            <span class="text-sm font-medium text-gray-900">{{ day.count }} transactions</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500 text-center py-8">No transaction data yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Users -->
+        <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">Recent Users</h3>
+                <a href="/admin/users" class="text-sm text-blue-600 hover:text-blue-700">View All →</a>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">User</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Email</th>
+                            <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase">Admin</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for user in recent_users %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                                        {{ (user.first_name or user.email)[0]|upper }}
+                                    </div>
+                                    <span class="ml-3 text-sm font-medium text-gray-900">{{ user.full_name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ user.email }}</td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if user.is_active %}bg-blue-100 text-blue-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ 'Active' if user.is_active else 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                {% if user.is_admin %}
+                                <i data-lucide="shield" class="h-4 w-4 text-blue-600 mx-auto"></i>
+                                {% else %}
+                                <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Recent Transactions -->
+        <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">ID</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Description</th>
+                            <th class="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for txn in recent_transactions %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm text-gray-600">#{{ txn.id }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ txn.transaction_date.strftime('%Y-%m-%d') if txn.transaction_date else 'N/A' }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{{ txn.description or 'No description' }}</td>
+                            <td class="px-6 py-4 text-sm text-right font-mono {% if txn.amount < 0 %}text-red-600{% else %}text-blue-600{% endif %}">
+                                {{ "%.2f"|format(txn.amount|float) }}
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if txn.category %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ txn.category or 'Uncategorized' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if txn.review_status == 'approved' %}bg-blue-100 text-blue-800{% elif txn.review_status == 'rejected' %}bg-red-100 text-red-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                    {{ txn.review_status|title }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

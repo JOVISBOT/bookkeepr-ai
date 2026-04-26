@@ -3,41 +3,160 @@
 {% block title %}Settings{% endblock %}
 
 {% block content %}
-<div class="bg-gray-50 min-h-screen">
-    <div class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <h1 class="text-2xl font-bold text-gray-900">Settings</h1>
-        </div>
+<div class="min-h-screen bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <h1 class="text-3xl font-bold text-gray-900">Settings</h1>
+      <p class="text-gray-600 mt-1">Manage your account, integrations, and preferences</p>
     </div>
-    
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
-            <div class="p-6 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">Profile Settings</h2>
-                <p class="text-gray-500 text-sm">Manage your account information</p>
-            </div>
-            <div class="p-6 space-y-6">
-                <div class="grid grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">First Name</label>
-                        <input type="text" value="{{ current_user.first_name }}" class="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-2">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Last Name</label>
-                        <input type="text" value="{{ current_user.last_name }}" class="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-2">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" value="{{ current_user.email }}" class="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-2" readonly>
-                </div>
-                <div class="pt-4">
-                    <button class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
-                        Save Changes
-                    </button>
-                </div>
-            </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- User Profile -->
+      <div class="bk-card">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-3 rounded-lg" style="background: var(--bk-primary-light); color: var(--bk-primary);">
+            <i data-lucide="user" class="h-5 w-5"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">User Profile</h3>
+            <p class="text-sm text-gray-500">Update your personal information</p>
+          </div>
         </div>
+        <form class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" value="{{ current_user.email }}" class="bk-input w-full" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+            <input type="text" value="{{ current_user.first_name or '' }}" class="bk-input w-full" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+            <input type="text" value="{{ current_user.last_name or '' }}" class="bk-input w-full" />
+          </div>
+          <button type="submit" class="bk-btn-primary mt-3">Save Changes</button>
+        </form>
+      </div>
+
+      <!-- QuickBooks Integration -->
+      <div class="bk-card">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-3 rounded-lg" style="background: #dcfce7; color: #16a34a;">
+            <i data-lucide="link" class="h-5 w-5"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">QuickBooks Integration</h3>
+            <p class="text-sm text-gray-500">Connect your QuickBooks Online account</p>
+          </div>
+        </div>
+        <div class="mb-4">
+          <span class="bk-badge bk-badge-warning">Not Connected</span>
+        </div>
+        <a href="/quickbooks/connect" class="bk-btn-primary">
+          <i data-lucide="link" class="h-4 w-4"></i>
+          Connect QuickBooks
+        </a>
+      </div>
+
+      <!-- AI Settings -->
+      <div class="bk-card">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-3 rounded-lg" style="background: #ede9fe; color: #7c3aed;">
+            <i data-lucide="sparkles" class="h-5 w-5"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">AI Settings</h3>
+            <p class="text-sm text-gray-500">Configure AI bookkeeping preferences</p>
+          </div>
+        </div>
+        <form class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Auto-categorization</label>
+            <select class="bk-input w-full">
+              <option>Enabled</option>
+              <option>Disabled</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Confidence Threshold</label>
+            <input type="range" min="50" max="95" value="80" class="w-full" />
+            <p class="text-xs text-gray-500 mt-1">Items above this score are auto-approved</p>
+          </div>
+          <button type="submit" class="bk-btn-primary mt-3">Save AI Settings</button>
+        </form>
+      </div>
+
+      <!-- Notifications -->
+      <div class="bk-card">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-3 rounded-lg" style="background: #fef3c7; color: #d97706;">
+            <i data-lucide="bell" class="h-5 w-5"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
+            <p class="text-sm text-gray-500">Email notification preferences</p>
+          </div>
+        </div>
+        <form class="space-y-3">
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked class="rounded" /> Daily summary
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked class="rounded" /> Uncategorized transactions alert
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" class="rounded" /> Monthly reports
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" class="rounded" /> Anomaly detection alerts
+          </label>
+          <button type="submit" class="bk-btn-primary mt-3">Save Preferences</button>
+        </form>
+      </div>
+
+      <!-- Security (NEW) -->
+      <div class="bk-card lg:col-span-2">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-3 rounded-lg" style="background: #fee2e2; color: #ef4444;">
+            <i data-lucide="shield" class="h-5 w-5"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Security</h3>
+            <p class="text-sm text-gray-500">Two-factor auth and session management</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="p-4 border border-gray-200 rounded-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-gray-900">Two-Factor Authentication</p>
+                <p class="text-sm text-gray-500">{% if current_user.mfa_enabled %}Enabled{% else %}Not configured{% endif %}</p>
+              </div>
+              {% if current_user.mfa_enabled %}
+                <span class="bk-badge bk-badge-success">Active</span>
+              {% else %}
+                <a href="/mfa/setup" class="bk-btn-primary text-sm">Enable MFA</a>
+              {% endif %}
+            </div>
+          </div>
+          <div class="p-4 border border-gray-200 rounded-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium text-gray-900">Change Password</p>
+                <p class="text-sm text-gray-500">Last changed: never</p>
+              </div>
+              <a href="#" class="bk-btn-secondary text-sm">Change</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
+  </div>
 </div>
 {% endblock %}

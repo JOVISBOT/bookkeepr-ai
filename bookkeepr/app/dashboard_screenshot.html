@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+.header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+.stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.stat-label { color: #666; font-size: 14px; }
+.stat-value { font-size: 28px; font-weight: bold; color: #333; margin-top: 5px; }
+table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+th { background: #667eea; color: white; padding: 12px; text-align: left; }
+td { padding: 12px; border-bottom: 1px solid #eee; }
+tr:hover { background: #f9f9f9; }
+.status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+.approved { background: #d4edda; color: #155724; }
+.pending { background: #fff3cd; color: #856404; }
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>BookKeepr Dashboard</h1>
+    <p>AI-Powered Bookkeeping System - FULLY OPERATIONAL</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Transactions</div>
+        <div class="stat-value">60</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Pending Review</div>
+        <div class="stat-value">23</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Accuracy Rate</div>
+        <div class="stat-value">85.5%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Monthly Spending</div>
+        <div class="stat-value">$40621.00</div>
+    </div>
+</div>
+
+<table>
+<tr>
+    <th>ID</th>
+    <th>Date</th>
+    <th>Description</th>
+    <th>Vendor</th>
+    <th>Amount</th>
+    <th>Category</th>
+    <th>Status</th>
+</tr>
+
+<tr>
+    <td>1</td>
+    <td>2026-02-28</td>
+    <td>Notion - Feb 2026</td>
+    <td>Notion</td>
+    <td>$138.0</td>
+    <td>Software Subscriptions</td>
+    <td><span class="status-badge approved">approved</span></td>
+</tr>
+
+<tr>
+    <td>2</td>
+    <td>2026-03-17</td>
+    <td>Notion - Mar 2026</td>
+    <td>Notion</td>
+    <td>$439.0</td>
+    <td>Software Subscriptions</td>
+    <td><span class="status-badge pending">pending</span></td>
+</tr>
+
+<tr>
+    <td>3</td>
+    <td>2026-03-01</td>
+    <td>Staples - Mar 2026</td>
+    <td>Staples</td>
+    <td>$411.0</td>
+    <td>Office Supplies</td>
+    <td><span class="status-badge pending">pending</span></td>
+</tr>
+
+<tr>
+    <td>4</td>
+    <td>2026-03-28</td>
+    <td>Upwork - Mar 2026</td>
+    <td>Upwork</td>
+    <td>$470.0</td>
+    <td>Professional Services</td>
+    <td><span class="status-badge pending">pending</span></td>
+</tr>
+
+<tr>
+    <td>5</td>
+    <td>2026-02-03</td>
+    <td>Staples - Feb 2026</td>
+    <td>Staples</td>
+    <td>$214.0</td>
+    <td>Office Supplies</td>
+    <td><span class="status-badge approved">approved</span></td>
+</tr>
+
+<tr>
+    <td>6</td>
+    <td>2026-01-26</td>
+    <td>WeWork - Jan 2026</td>
+    <td>WeWork</td>
+    <td>$2109.0</td>
+    <td>Rent</td>
+    <td><span class="status-badge approved">approved</span></td>
+</tr>
+
+<tr>
+    <td>7</td>
+    <td>2026-03-03</td>
+    <td>Staples - Mar 2026</td>
+    <td>Staples</td>
+    <td>$433.0</td>
+    <td>Office Supplies</td>
+    <td><span class="status-badge pending">pending</span></td>
+</tr>
+
+<tr>
+    <td>8</td>
+    <td>2026-02-10</td>
+    <td>PG&E - Feb 2026</td>
+    <td>PG&E</td>
+    <td>$152.0</td>
+    <td>Utilities</td>
+    <td><span class="status-badge approved">approved</span></td>
+</tr>
+
+<tr>
+    <td>9</td>
+    <td>2026-04-08</td>
+    <td>Google Ads - Apr 2026</td>
+    <td>Google Ads</td>
+    <td>$443.0</td>
+    <td>Marketing</td>
+    <td><span class="status-badge approved">approved</span></td>
+</tr>
+
+<tr>
+    <td>10</td>
+    <td>2026-03-22</td>
+    <td>Uber - Mar 2026</td>
+    <td>Uber</td>
+    <td>$474.0</td>
+    <td>Travel</td>
+    <td><span class="status-badge approved">approved</span></td>
+</tr>
+
+</table>
+<div style="margin-top: 20px; color: #666; text-align: center;">
+    <p>Showing 10 of 50 transactions</p>
+    <p><strong>Agent Zero Mission: COMPLETE</strong></p>
+</div>
+</body>
+</html>

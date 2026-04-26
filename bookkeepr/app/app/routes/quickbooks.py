@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from extensions import db
 from app.models.company import Company
-from app.services.auth_service import AuthService
+from app.services.qb_auth import QuickBooksAuthService as AuthService
 
 bp = Blueprint('quickbooks', __name__)
 
@@ -39,11 +39,11 @@ def callback():
     try:
         # Exchange code for tokens
         auth_service = AuthService()
-        tokens = auth_service.exchange_code_for_tokens(auth_code, realm_id)
+        tokens = auth_service.exchange_code_for_token(auth_code, realm_id)
         
         # Calculate token expiry
-        from app.services.auth_service import AuthService
-        expires_at = AuthService.calculate_token_expiry(tokens['expires_in'])
+        from datetime import datetime, timedelta
+        expires_at = datetime.utcnow() + timedelta(seconds=tokens.get('expires_in', 3600))
         
         # Create or update company connection
         company = Company.query.filter_by(qbo_realm_id=realm_id).first()
@@ -51,7 +51,9 @@ def callback():
         if not company:
             company = Company(
                 user_id=current_user.id,
-                qbo_realm_id=realm_id
+                tenant_id=current_user.tenant_id,
+                qbo_realm_id=realm_id,
+                is_active=True,
             )
             db.session.add(company)
         
@@ -63,12 +65,48 @@ def callback():
         
         db.session.commit()
         
-        # Sync company info
-        from app.services.sync_service import SyncService
-        sync_service = SyncService(company)
-        sync_service.sync_company_info()
+        # Trigger initial sync of accounts + transactions (don't fail connection if errors)
+        sync_summary = {'accounts': 0, 'transactions': 0, 'errors': []}
+        try:
+            from app.services.qb_data_sync import QuickBooksDataSync
+            from datetime import datetime, timedelta
+            sync_service = QuickBooksDataSync(company)
+            
+            # Sync accounts
+            try:
+                if hasattr(sync_service, 'sync_accounts'):
+                    result = sync_service.sync_accounts()
+                    sync_summary['accounts'] = result.get('synced', 0) if isinstance(result, dict) else 0
+            except Exception as e:
+                sync_summary['errors'].append(f'Accounts: {e}')
+                current_app.logger.warning(f"Account sync failed: {e}")
+            
+            # Sync transactions (last 90 days by default)
+            try:
+                if hasattr(sync_service, 'sync_transactions'):
+                    end_date = datetime.utcnow()
+                    start_date = end_date - timedelta(days=90)
+                    result = sync_service.sync_transactions(start_date, end_date)
+                    sync_summary['transactions'] = result.get('synced', 0) if isinstance(result, dict) else 0
+            except Exception as e:
+                sync_summary['errors'].append(f'Transactions: {e}')
+                current_app.logger.warning(f"Transaction sync failed: {e}")
+            
+            company.last_sync_at = datetime.utcnow()
+            company.sync_status = 'success' if not sync_summary['errors'] else 'partial'
+            db.session.commit()
+        except Exception as sync_err:
+            current_app.logger.warning(f"Initial sync failed (non-fatal): {sync_err}")
+            company.sync_status = 'error'
+            db.session.commit()
         
-        flash('Successfully connected to QuickBooks!', 'success')
+        msg = 'Successfully connected to QuickBooks!'
+        if sync_summary['transactions']:
+            msg += f" Synced {sync_summary['accounts']} accounts and {sync_summary['transactions']} transactions."
+        elif sync_summary['accounts']:
+            msg += f" Synced {sync_summary['accounts']} accounts. Transactions will sync next."
+        
+        flash(msg, 'success')
         return redirect(url_for('dashboard.index'))
         
     except Exception as e:
@@ -118,10 +156,10 @@ def sync(company_id):
         return redirect(url_for('dashboard.company_settings'))
     
     try:
-        from app.services.sync_service import SyncService
+        from app.services.qb_data_sync import QuickBooksDataSync
         
-        sync_service = SyncService(company)
-        result = sync_service.run_full_sync()
+        sync_service = QuickBooksDataSync(company)
+        result = sync_service.sync_all()
         
         flash('Sync completed successfully!', 'success')
         

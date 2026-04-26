@@ -3,122 +3,137 @@
 {% block title %}Pricing{% endblock %}
 
 {% block content %}
-<div class="bg-white py-20">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-16">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">Simple, transparent pricing</h1>
-            <p class="text-xl text-gray-600">
-                Choose the plan that fits your business. All plans include a 14-day free trial.
+<div class="bg-gray-50 min-h-screen">
+    <!-- Hero -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Choose the plan that fits your practice. All plans include a 14-day free trial.
             </p>
         </div>
+    </div>
+    
+    <!-- Pricing Cards -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {% for plan in plans %}
+            <div class="bg-white rounded-xl shadow-sm border {% if plan.popular %}border-blue-500 ring-2 ring-blue-500{% else %}border-gray-200{% endif %} overflow-hidden flex flex-col">
+                {% if plan.popular %}
+                <div class="bg-blue-500 text-white text-center text-sm font-semibold py-2">
+                    Most Popular
+                </div>
+                {% endif %}
+                <div class="p-6 flex-grow">
+                    <h3 class="text-xl font-bold text-gray-900">{{ plan.name }}</h3>
+                    <p class="text-gray-500 text-sm mt-1">{{ plan.description }}</p>
+                    <div class="mt-4">
+                        <span class="text-4xl font-bold text-gray-900">${{ plan.price }}</span>
+                        <span class="text-gray-500">/month</span>
+                    </div>
+                    <ul class="mt-6 space-y-3">
+                        {% for feature in plan.features %}
+                        <li class="flex items-start">
+                            <i data-lucide="check" class="h-5 w-5 text-blue-500 flex-shrink-0 mr-2"></i>
+                            <span class="text-sm text-gray-700">{{ feature }}</span>
+                        </li>
+                        {% endfor %}
+                        {% for feature in plan.not_included %}
+                        <li class="flex items-start opacity-50">
+                            <i data-lucide="x" class="h-5 w-5 text-gray-400 flex-shrink-0 mr-2"></i>
+                            <span class="text-sm text-gray-500">{{ feature }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="p-6 pt-0">
+                    <a href="{{ url_for('auth.register') }}" class="block w-full text-center {% if plan.popular %}bg-blue-600 text-white hover:bg-blue-700{% else %}bg-gray-100 text-gray-900 hover:bg-gray-200{% endif %} px-4 py-3 rounded-lg font-semibold transition-colors">
+                        {{ plan.cta }}
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <!-- Standard -->
-            <div class="border border-gray-200 rounded-xl p-8 hover:shadow-lg transition-shadow">
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">Standard</h3>
-                <p class="text-gray-500 mb-6">For small businesses</p>
-                <div class="mb-6">
-                    <span class="text-4xl font-bold">$199</span>
-                    <span class="text-gray-500">/month</span>
-                </div>
-                <ul class="space-y-3 mb-8">
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Up to 500 transactions/month</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>AI categorization</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Basic reconciliation</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Email support</span>
-                    </li>
-                </ul>
-                <a href="{{ url_for('auth.register') }}" class="block w-full text-center border-2 border-emerald-600 text-emerald-600 py-3 rounded-lg font-semibold hover:bg-emerald-600 hover:text-white transition-colors">
-                    Start Free Trial
-                </a>
+        <!-- Comparison Table -->
+        <div class="mt-16 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Feature Comparison</h2>
             </div>
-            
-            <!-- Silver (Popular) -->
-            <div class="border-2 border-emerald-600 rounded-xl p-8 relative">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span class="bg-emerald-600 text-white px-4 py-1 rounded-full text-sm font-medium">Most Popular</span>
-                </div>
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">Silver</h3>
-                <p class="text-gray-500 mb-6">For growing businesses</p>
-                <div class="mb-6">
-                    <span class="text-4xl font-bold">$299</span>
-                    <span class="text-gray-500">/month</span>
-                </div>
-                <ul class="space-y-3 mb-8">
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Up to 2,000 transactions/month</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Advanced AI categorization</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Smart reconciliation</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Priority support</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Invoice automation</span>
-                    </li>
-                </ul>
-                <a href="{{ url_for('auth.register') }}" class="block w-full text-center bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors">
-                    Start Free Trial
-                </a>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Feature</th>
+                            <th class="text-center px-6 py-3 text-sm font-medium text-gray-500">Starter</th>
+                            <th class="text-center px-6 py-3 text-sm font-medium text-blue-600">Pro</th>
+                            <th class="text-center px-6 py-3 text-sm font-medium text-gray-500">Business</th>
+                            <th class="text-center px-6 py-3 text-sm font-medium text-gray-500">Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for feature in comparison %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-3 text-sm font-medium text-gray-900">{{ feature.name }}</td>
+                            <td class="text-center px-6 py-3 text-sm text-gray-600">
+                                {% if feature.starter is sameas true %}
+                                    <i data-lucide="check" class="h-5 w-5 text-blue-500 mx-auto"></i>
+                                {% elif feature.starter is sameas false %}
+                                    <i data-lucide="x" class="h-5 w-5 text-gray-300 mx-auto"></i>
+                                {% else %}
+                                    {{ feature.starter }}
+                                {% endif %}
+                            </td>
+                            <td class="text-center px-6 py-3 text-sm text-gray-600 bg-blue-50">
+                                {% if feature.pro is sameas true %}
+                                    <i data-lucide="check" class="h-5 w-5 text-blue-500 mx-auto"></i>
+                                {% elif feature.pro is sameas false %}
+                                    <i data-lucide="x" class="h-5 w-5 text-gray-300 mx-auto"></i>
+                                {% else %}
+                                    {{ feature.pro }}
+                                {% endif %}
+                            </td>
+                            <td class="text-center px-6 py-3 text-sm text-gray-600">
+                                {% if feature.business is sameas true %}
+                                    <i data-lucide="check" class="h-5 w-5 text-blue-500 mx-auto"></i>
+                                {% elif feature.business is sameas false %}
+                                    <i data-lucide="x" class="h-5 w-5 text-gray-300 mx-auto"></i>
+                                {% else %}
+                                    {{ feature.business }}
+                                {% endif %}
+                            </td>
+                            <td class="text-center px-6 py-3 text-sm text-gray-600">
+                                {% if feature.enterprise is sameas true %}
+                                    <i data-lucide="check" class="h-5 w-5 text-blue-500 mx-auto"></i>
+                                {% elif feature.enterprise is sameas false %}
+                                    <i data-lucide="x" class="h-5 w-5 text-gray-300 mx-auto"></i>
+                                {% else %}
+                                    {{ feature.enterprise }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            
-            <!-- Gold -->
-            <div class="border border-gray-200 rounded-xl p-8 hover:shadow-lg transition-shadow">
-                <h3 class="text-xl font-semibold text-gray-900 mb-2">Gold</h3>
-                <p class="text-gray-500 mb-6">For established businesses</p>
-                <div class="mb-6">
-                    <span class="text-4xl font-bold">$399</span>
-                    <span class="text-gray-500">/month</span>
-                </div>
-                <ul class="space-y-3 mb-8">
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Unlimited transactions</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Enterprise AI categorization</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Advanced reconciliation</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Dedicated support</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>Multi-company support</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i data-lucide="check" class="h-5 w-5 text-emerald-600 mr-2"></i>
-                        <span>API access</span>
-                    </li>
-                </ul>
-                <a href="{{ url_for('auth.register') }}" class="block w-full text-center border-2 border-emerald-600 text-emerald-600 py-3 rounded-lg font-semibold hover:bg-emerald-600 hover:text-white transition-colors">
-                    Contact Sales
-                </a>
+        </div>
+        
+        <!-- FAQ / Trust -->
+        <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <i data-lucide="shield-check" class="h-10 w-10 text-blue-600 mx-auto mb-4"></i>
+                <h3 class="font-semibold text-gray-900">SOC 2 Compliant</h3>
+                <p class="text-sm text-gray-500 mt-2">Enterprise-grade security for your financial data.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <i data-lucide="refresh-cw" class="h-10 w-10 text-blue-600 mx-auto mb-4"></i>
+                <h3 class="font-semibold text-gray-900">14-Day Free Trial</h3>
+                <p class="text-sm text-gray-500 mt-2">Try any plan risk-free. Cancel anytime.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <i data-lucide="credit-card" class="h-10 w-10 text-blue-600 mx-auto mb-4"></i>
+                <h3 class="font-semibold text-gray-900">No Hidden Fees</h3>
+                <p class="text-sm text-gray-500 mt-2">What you see is what you pay. Simple.</p>
             </div>
         </div>
     </div>

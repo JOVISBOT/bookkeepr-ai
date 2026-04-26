@@ -1,202 +1,242 @@
-"""Billing and subscription routes"""
-from flask import Blueprint, request, jsonify
+"""Billing and Subscription Management Routes"""
+from datetime import datetime, timedelta
+from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
-from app import db
-from app.models.subscription import Subscription
-from app.services.stripe_service import StripeService
-import os
 
-billing_bp = Blueprint('billing', __name__, url_prefix='/api/v1/billing')
+from extensions import db
+from app.models.subscription import SubscriptionPlan, UserSubscription, BillingInvoice
+
+bp = Blueprint('billing', __name__, url_prefix='/billing')
 
 
-@billing_bp.route('/plans', methods=['GET'])
+@bp.route('/plans')
+@login_required
 def get_plans():
-    """Get available pricing plans"""
-    plans = StripeService.get_all_plans()
-    return jsonify({
-        'success': True,
-        'plans': plans
-    })
-
-
-@billing_bp.route('/subscription', methods=['GET'])
-@login_required
-def get_subscription():
-    """Get current user's subscription"""
-    subscription = Subscription.query.filter_by(user_id=current_user.id).first()
+    """Billing page - show current plan, usage, upgrade options"""
+    subscription = UserSubscription.query.filter_by(user_id=current_user.id).first()
     
+    # Default plan if no subscription
     if not subscription:
-        return jsonify({
-            'success': True,
-            'subscription': None,
-            'has_active_subscription': False
-        })
+        plan = SubscriptionPlan.query.filter_by(name='starter').first()
+        if not plan:
+            plan = _create_default_plans()
+        subscription = _create_trial_subscription(current_user.id, plan.id)
     
-    return jsonify({
-        'success': True,
-        'subscription': subscription.to_dict(),
-        'has_active_subscription': subscription.is_active()
-    })
+    # Get invoices
+    invoices = BillingInvoice.query.filter_by(user_id=current_user.id).order_by(
+        BillingInvoice.created_at.desc()
+    ).limit(12).all()
+    
+    # All plans for upgrade comparison
+    all_plans = SubscriptionPlan.query.filter_by(is_active=True).order_by(
+        SubscriptionPlan.price_monthly
+    ).all()
+    
+    return render_template('billing.html', 
+        subscription=subscription,
+        invoices=invoices,
+        all_plans=all_plans
+    )
 
 
-@billing_bp.route('/create-checkout', methods=['POST'])
+@bp.route('/subscribe', methods=['POST'])
 @login_required
-def create_checkout():
-    """Create Stripe checkout session"""
-    data = request.get_json()
-    plan_type = data.get('plan_type', 'standard')
+def subscribe():
+    """Create subscription (Stripe scaffold)"""
+    data = request.get_json() or {}
+    plan_id = data.get('plan_id')
+    billing_cycle = data.get('billing_cycle', 'monthly')
     
-    # Get or create subscription record
-    subscription = Subscription.query.filter_by(user_id=current_user.id).first()
+    if not plan_id:
+        return jsonify({'success': False, 'error': 'Plan ID required'}), 400
     
-    if not subscription:
-        # Create Stripe customer
-        customer = StripeService.create_customer(current_user)
-        if not customer:
-            return jsonify({
-                'success': False,
-                'message': 'Failed to create customer'
-            }), 500
-        
-        subscription = Subscription(
+    plan = SubscriptionPlan.query.get(plan_id)
+    if not plan:
+        return jsonify({'success': False, 'error': 'Plan not found'}), 404
+    
+    # TODO: Integrate with Stripe
+    # For now, create a trial subscription
+    subscription = UserSubscription.query.filter_by(user_id=current_user.id).first()
+    
+    if subscription:
+        subscription.plan_id = plan.id
+        subscription.billing_cycle = billing_cycle
+        subscription.status = 'active'
+        subscription.current_period_start = datetime.utcnow()
+        subscription.current_period_end = datetime.utcnow() + timedelta(days=30)
+    else:
+        subscription = UserSubscription(
             user_id=current_user.id,
-            stripe_customer_id=customer.id,
-            plan_type=plan_type
+            plan_id=plan.id,
+            billing_cycle=billing_cycle,
+            status='active',
+            current_period_start=datetime.utcnow(),
+            current_period_end=datetime.utcnow() + timedelta(days=30)
         )
         db.session.add(subscription)
-        db.session.commit()
     
-    # Create checkout session
-    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-    success_url = f"{frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{frontend_url}/billing/cancel"
-    
-    session = StripeService.create_checkout_session(
-        subscription.stripe_customer_id,
-        plan_type,
-        success_url,
-        cancel_url
-    )
-    
-    if not session:
-        return jsonify({
-            'success': False,
-            'message': 'Failed to create checkout session'
-        }), 500
+    db.session.commit()
     
     return jsonify({
         'success': True,
-        'checkout_url': session.url,
-        'session_id': session.id
+        'message': f'Subscribed to {plan.display_name} plan',
+        'subscription': subscription.to_dict()
     })
 
 
-@billing_bp.route('/cancel', methods=['POST'])
+@bp.route('/cancel', methods=['POST'])
 @login_required
-def cancel_subscription():
+def cancel():
     """Cancel subscription at period end"""
-    subscription = Subscription.query.filter_by(user_id=current_user.id).first()
+    subscription = UserSubscription.query.filter_by(user_id=current_user.id).first()
     
-    if not subscription or not subscription.stripe_subscription_id:
-        return jsonify({
-            'success': False,
-            'message': 'No active subscription found'
-        }), 404
+    if not subscription:
+        return jsonify({'success': False, 'error': 'No active subscription'}), 404
     
-    result = StripeService.cancel_subscription(subscription.stripe_subscription_id)
-    
-    if result:
-        subscription.status = 'canceled'
-        db.session.commit()
-        return jsonify({
-            'success': True,
-            'message': 'Subscription will be canceled at period end'
-        })
+    subscription.cancel_at_period_end = True
+    subscription.status = 'canceled'
+    subscription.canceled_at = datetime.utcnow()
+    db.session.commit()
     
     return jsonify({
-        'success': False,
-        'message': 'Failed to cancel subscription'
-    }), 500
+        'success': True,
+        'message': 'Subscription will cancel at end of period',
+        'current_period_end': subscription.current_period_end.isoformat() if subscription.current_period_end else None
+    })
 
 
-@billing_bp.route('/update', methods=['POST'])
+@bp.route('/usage')
 @login_required
-def update_subscription():
-    """Update subscription plan"""
-    data = request.get_json()
-    new_plan = data.get('plan_type')
+def usage():
+    """Get current usage stats"""
+    subscription = UserSubscription.query.filter_by(user_id=current_user.id).first()
     
-    if not new_plan:
-        return jsonify({
-            'success': False,
-            'message': 'Plan type required'
-        }), 400
+    if not subscription or not subscription.plan:
+        return jsonify({'error': 'No subscription found'}), 404
     
-    subscription = Subscription.query.filter_by(user_id=current_user.id).first()
-    
-    if not subscription or not subscription.stripe_subscription_id:
-        return jsonify({
-            'success': False,
-            'message': 'No active subscription found'
-        }), 404
-    
-    price_id = os.environ.get(f'STRIPE_PRICE_{new_plan.upper()}')
-    result = StripeService.update_subscription(
-        subscription.stripe_subscription_id,
-        price_id
-    )
-    
-    if result:
-        subscription.plan_type = new_plan
-        db.session.commit()
-        return jsonify({
-            'success': True,
-            'message': f'Subscription updated to {new_plan}'
-        })
+    plan = subscription.plan
+    used = subscription.transactions_used_this_period
+    limit = plan.max_transactions
     
     return jsonify({
-        'success': False,
-        'message': 'Failed to update subscription'
-    }), 500
+        'transactions_used': used,
+        'transactions_limit': limit,
+        'percentage': round((used / limit) * 100, 1) if limit > 0 else 0,
+        'remaining': max(0, limit - used),
+        'period_end': subscription.current_period_end.isoformat() if subscription.current_period_end else None,
+    })
 
 
-@billing_bp.route('/webhook', methods=['POST'])
-def webhook():
-    """Handle Stripe webhooks"""
-    payload = request.get_data()
-    sig_header = request.headers.get('Stripe-Signature')
+@bp.route('/invoices')
+@login_required
+def list_invoices():
+    """List invoice history"""
+    invoices = BillingInvoice.query.filter_by(user_id=current_user.id).order_by(
+        BillingInvoice.created_at.desc()
+    ).all()
     
-    event = StripeService.construct_event(payload, sig_header)
+    return jsonify({
+        'invoices': [inv.to_dict() for inv in invoices],
+        'total': len(invoices)
+    })
+
+
+@bp.route('/webhook', methods=['POST'])
+def stripe_webhook():
+    """Stripe webhook handler (placeholder)"""
+    # TODO: Implement Stripe webhook signature verification
+    # and handle events: invoice.paid, invoice.payment_failed, etc.
+    return jsonify({'status': 'received'}), 200
+
+
+def _create_default_plans():
+    """Create default subscription plans if they don't exist"""
+    plans = [
+        SubscriptionPlan(
+            name='starter',
+            display_name='Starter',
+            price_monthly=199,
+            price_yearly=1990,
+            max_transactions=1000,
+            max_companies=1,
+            max_users=1,
+            has_ai_categorization=True,
+            has_anomaly_detection=False,
+            has_cashflow_forecasting=False,
+            has_advanced_reports=False,
+            has_api_access=False,
+            has_priority_support=False,
+            has_dedicated_manager=False,
+        ),
+        SubscriptionPlan(
+            name='pro',
+            display_name='Pro',
+            price_monthly=499,
+            price_yearly=4990,
+            max_transactions=5000,
+            max_companies=3,
+            max_users=3,
+            has_ai_categorization=True,
+            has_anomaly_detection=True,
+            has_cashflow_forecasting=False,
+            has_advanced_reports=True,
+            has_api_access=False,
+            has_priority_support=True,
+            has_dedicated_manager=False,
+        ),
+        SubscriptionPlan(
+            name='business',
+            display_name='Business',
+            price_monthly=999,
+            price_yearly=9990,
+            max_transactions=25000,
+            max_companies=10,
+            max_users=10,
+            has_ai_categorization=True,
+            has_anomaly_detection=True,
+            has_cashflow_forecasting=True,
+            has_advanced_reports=True,
+            has_api_access=True,
+            has_priority_support=True,
+            has_dedicated_manager=False,
+        ),
+        SubscriptionPlan(
+            name='enterprise',
+            display_name='Enterprise',
+            price_monthly=2499,
+            price_yearly=24990,
+            max_transactions=0,  # Unlimited
+            max_companies=0,  # Unlimited
+            max_users=0,  # Unlimited
+            has_ai_categorization=True,
+            has_anomaly_detection=True,
+            has_cashflow_forecasting=True,
+            has_advanced_reports=True,
+            has_api_access=True,
+            has_priority_support=True,
+            has_dedicated_manager=True,
+        ),
+    ]
     
-    if not event:
-        return jsonify({'success': False}), 400
+    for plan in plans:
+        existing = SubscriptionPlan.query.filter_by(name=plan.name).first()
+        if not existing:
+            db.session.add(plan)
     
-    # Handle the event
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        
-        # Update subscription
-        customer_id = session.get('customer')
-        subscription_id = session.get('subscription')
-        
-        subscription = Subscription.query.filter_by(
-            stripe_customer_id=customer_id
-        ).first()
-        
-        if subscription:
-            subscription.stripe_subscription_id = subscription_id
-            subscription.status = 'active'
-            db.session.commit()
-    
-    elif event['type'] == 'invoice.payment_failed':
-        subscription_id = event['data']['object'].get('subscription')
-        
-        subscription = Subscription.query.filter_by(
-            stripe_subscription_id=subscription_id
-        ).first()
-        
-        if subscription:
-            subscription.status = 'past_due'
-            db.session.commit()
-    
-    return jsonify({'success': True})
+    db.session.commit()
+    return plans[0]
+
+
+def _create_trial_subscription(user_id, plan_id):
+    """Create a trial subscription for new users"""
+    subscription = UserSubscription(
+        user_id=user_id,
+        plan_id=plan_id,
+        billing_cycle='monthly',
+        status='trialing',
+        current_period_start=datetime.utcnow(),
+        current_period_end=datetime.utcnow() + timedelta(days=14)
+    )
+    db.session.add(subscription)
+    db.session.commit()
+    return subscription

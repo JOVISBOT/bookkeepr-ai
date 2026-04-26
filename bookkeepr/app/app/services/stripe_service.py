@@ -9,26 +9,32 @@ stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 
 # Price IDs for different plans
 PRICE_IDS = {
-    'standard': os.environ.get('STRIPE_PRICE_STANDARD', 'price_standard'),
-    'silver': os.environ.get('STRIPE_PRICE_SILVER', 'price_silver'),
-    'gold': os.environ.get('STRIPE_PRICE_GOLD', 'price_gold')
+    'starter': os.environ.get('STRIPE_PRICE_STARTER', 'price_starter'),
+    'professional': os.environ.get('STRIPE_PRICE_PROFESSIONAL', 'price_professional'),
+    'business': os.environ.get('STRIPE_PRICE_BUSINESS', 'price_business'),
+    'enterprise': os.environ.get('STRIPE_PRICE_ENTERPRISE', 'price_enterprise')
 }
 
 PLAN_DETAILS = {
-    'standard': {
-        'name': 'Standard',
+    'starter': {
+        'name': 'Starter',
         'price': 199,
-        'features': ['QBO Integration', 'AI Categorization', 'Dashboard', 'Email Support']
+        'features': ['AI Bookkeeping', 'Basic Reports', 'Email Support', 'Up to 100 transactions/month']
     },
-    'silver': {
-        'name': 'Silver',
-        'price': 299,
-        'features': ['Everything in Standard', 'QBD Integration', 'Bank Reconciliation', 'Priority Support']
+    'professional': {
+        'name': 'Professional',
+        'price': 499,
+        'features': ['Everything in Starter', 'Tax Preparation', 'Monthly Review', 'Priority Support', 'Up to 1,000 transactions/month']
     },
-    'gold': {
-        'name': 'Gold',
-        'price': 399,
-        'features': ['Everything in Silver', 'Multi-Company', 'API Access', 'Dedicated Support']
+    'business': {
+        'name': 'Business',
+        'price': 999,
+        'features': ['Everything in Pro', 'CFO Insights', 'Custom Integrations', 'Dedicated AI', 'Unlimited transactions']
+    },
+    'enterprise': {
+        'name': 'Enterprise',
+        'price': 2499,
+        'features': ['Everything in Business', 'Human Accountant', 'Audit Support', 'SLA Guarantee', 'White-glove Onboarding']
     }
 }
 

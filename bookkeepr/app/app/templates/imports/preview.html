@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Preview Import{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Preview Import</h1>
+          <p class="text-gray-600 mt-1">Importing to: <strong>{{ company.qbo_company_name }}</strong></p>
+        </div>
+        <span class="bk-badge bk-badge-info">{{ total_rows }} rows detected</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Detected columns -->
+    <div class="bk-card mb-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-3">Detected Columns</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {% for field, idx in col_map.items() %}
+        <div class="p-3 border border-gray-200 rounded-lg">
+          <div class="text-xs uppercase text-gray-500 tracking-wide">{{ field }}</div>
+          <div class="text-sm font-medium text-gray-900 mt-1">{{ headers[idx] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Preview table (first 10 rows) -->
+    <div class="bk-card p-0 overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">First 10 Rows Preview</h2>
+        <span class="text-sm text-gray-500">{{ total_rows }} total rows will be processed</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="bk-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Vendor</th>
+              <th class="text-right">Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in preview %}
+            <tr>
+              <td class="text-sm">{{ row.date or '—' }}</td>
+              <td class="font-medium">{{ row.description or '—' }}</td>
+              <td class="text-gray-600">{{ row.vendor or '—' }}</td>
+              <td class="text-right tabular-nums {% if row.amount and row.amount > 0 %}text-green-600{% else %}text-red-600{% endif %} font-medium">
+                {% if row.amount %}${{ "%.2f"|format(row.amount|abs) }}{% else %}—{% endif %}
+              </td>
+              <td>
+                {% if row.valid %}
+                  <span class="bk-badge bk-badge-success">Valid</span>
+                {% else %}
+                  <span class="bk-badge bk-badge-warning">Will skip</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Confirm bar -->
+    <div class="bk-card flex items-center justify-between">
+      <div>
+        <p class="font-medium text-gray-900">Ready to import?</p>
+        <p class="text-sm text-gray-600 mt-1">Duplicates will be auto-skipped. AI categorization runs after import.</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="{{ url_for('imports.cancel_csv') }}" class="bk-btn-secondary">Cancel</a>
+        <form method="POST" action="{{ url_for('imports.commit_csv') }}" class="inline">
+          <button type="submit" class="bk-btn-primary">
+            <i data-lucide="check" class="h-4 w-4"></i>
+            Import All {{ total_rows }} Rows
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

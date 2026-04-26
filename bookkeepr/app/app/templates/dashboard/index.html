@@ -13,9 +13,13 @@
                     <p class="text-gray-600 mt-1">Welcome back, {{ current_user.first_name or 'User' }}</p>
                 </div>
                 <div class="flex space-x-3">
-                    <a href="{{ url_for('quickbooks.connect') }}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center">
+                    <a href="{{ url_for('quickbooks.connect') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center">
                         <i data-lucide="link" class="h-4 w-4 mr-2"></i>
                         Connect QuickBooks
+                    </a>
+                    <a href="{{ url_for('review.index') }}" class="bg-amber-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-amber-700 transition-colors flex items-center">
+                        <i data-lucide="eye" class="h-4 w-4 mr-2"></i>
+                        Review Queue
                     </a>
                 </div>
             </div>
@@ -24,16 +28,17 @@
     
     <!-- Dashboard Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
         <!-- Quick Stats -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                 <div class="flex items-center">
-                    <div class="p-3 bg-emerald-100 rounded-lg">
-                        <i data-lucide="receipt" class="h-6 w-6 text-emerald-600"></i>
+                    <div class="p-3 bg-blue-100 rounded-lg">
+                        <i data-lucide="receipt" class="h-6 w-6 text-blue-600"></i>
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">Total Transactions</p>
-                        <p class="text-2xl font-bold text-gray-900">0</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.total_transactions or 0 }}</p>
                     </div>
                 </div>
             </div>
@@ -45,7 +50,7 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">Pending Review</p>
-                        <p class="text-2xl font-bold text-gray-900">0</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.pending_count or 0 }}</p>
                     </div>
                 </div>
             </div>
@@ -56,8 +61,8 @@
                         <i data-lucide="check-circle" class="h-6 w-6 text-blue-600"></i>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Categorized</p>
-                        <p class="text-2xl font-bold text-gray-900">0%</p>
+                        <p class="text-sm font-medium text-gray-500">AI Auto-Categorized</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.auto_categorization_rate or 0 }}%</p>
                     </div>
                 </div>
             </div>
@@ -69,46 +74,185 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">QBO Status</p>
-                        <p class="text-lg font-bold text-gray-900">Not Connected</p>
+                        <p class="text-lg font-bold {% if company and company.is_connected %}text-blue-600{% else %}text-gray-900{% endif %}">
+                            {{ 'Connected' if company and company.is_connected else 'Not Connected' }}
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Getting Started -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Getting Started</h2>
-            <p class="text-gray-600 mb-6">
-                Welcome to BookKeepr AI! To get started, connect your QuickBooks account 
-                and we'll automatically import your transactions.
-            </p>
-            
-            <div class="space-y-4">
-                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
-                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-semibold">1</div>
-                    <div class="ml-4">
-                        <h3 class="font-medium text-gray-900">Connect QuickBooks</h3>
-                        <p class="text-sm text-gray-500">Authorize access to your QuickBooks Online account</p>
-                    </div>
+        <!-- Premium Features Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Anomaly Alerts -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Anomaly Alerts</h3>
+                    <a href="/api/v1/ai/anomalies" class="text-sm text-blue-600 hover:text-blue-700">View All →</a>
                 </div>
-                
-                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
-                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gray-300 text-white flex items-center justify-center font-semibold">2</div>
-                    <div class="ml-4">
-                        <h3 class="font-medium text-gray-900">Import Transactions</h3>
-                        <p class="text-sm text-gray-500">We'll sync your last 90 days of transactions</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
-                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gray-300 text-white flex items-center justify-center font-semibold">3</div>
-                    <div class="ml-4">
-                        <h3 class="font-medium text-gray-900">Review & Categorize</h3>
-                        <p class="text-sm text-gray-500">Approve AI suggestions and make corrections</p>
-                    </div>
+                <div id="anomaly-alerts" class="space-y-3">
+                    <p class="text-gray-500 text-sm">Loading anomalies...</p>
                 </div>
             </div>
+            
+            <!-- Cash Flow Forecast -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Cash Flow Forecast</h3>
+                    <a href="/api/v1/ai/cashflow-forecast" class="text-sm text-blue-600 hover:text-blue-700">Details →</a>
+                </div>
+                <div id="cashflow-forecast" class="space-y-3">
+                    <p class="text-gray-500 text-sm">Loading forecast...</p>
+                </div>
+            </div>
+            
+            <!-- Subscription Status -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Your Plan</h3>
+                    <a href="{{ url_for('pricing.index') }}" class="text-sm text-blue-600 hover:text-blue-700">Manage →</a>
+                </div>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm text-gray-600">Current Plan</span>
+                    <span class="font-semibold text-gray-900">{{ subscription.plan.display_name if subscription else 'Starter' }}</span>
+                </div>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm text-gray-600">Transactions Used</span>
+                    <span class="font-semibold text-gray-900">{{ subscription.transactions_used_this_period if subscription else 0 }} / {{ subscription.plan.max_transactions if subscription and subscription.plan else 1000 }}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
+                    <div id="usage-bar-mini" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-xs text-gray-500">Resets in {{ subscription.days_until_renewal if subscription else 30 }} days</p>
+            </div>
+        </div>
+        
+        <!-- Recent Transactions -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+                <a href="{{ url_for('dashboard.transactions') }}" class="text-sm text-blue-600 hover:text-blue-700">View All →</a>
+            </div>
+            
+            {% if transactions %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Description</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                            <th class="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for txn in transactions %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ txn.transaction_date.strftime('%Y-%m-%d') if txn.transaction_date else 'N/A' }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{{ txn.description or 'No description' }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ txn.vendor_name or 'N/A' }}</td>
+                            <td class="px-6 py-4 text-sm text-right font-mono {% if txn.amount < 0 %}text-red-600{% else %}text-blue-600{% endif %}">
+                                {{ "%.2f"|format(txn.amount|float) }}
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if txn.category %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ txn.category or txn.suggested_category or 'Uncategorized' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if txn.review_status == 'approved' %}bg-blue-100 text-blue-800{% elif txn.review_status == 'rejected' %}bg-red-100 text-red-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                    {{ txn.review_status|title }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i data-lucide="inbox" class="h-12 w-12 text-gray-300 mx-auto mb-3"></i>
+                <p class="text-gray-500">No transactions yet. Connect QuickBooks to get started.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load usage bar
+fetch('/billing/usage')
+    .then(r => r.json())
+    .then(data => {
+        if (data.percentage !== undefined) {
+            const bar = document.getElementById('usage-bar-mini');
+            bar.style.width = Math.min(data.percentage, 100) + '%';
+            if (data.percentage >= 90) bar.classList.add('bg-red-500');
+            else if (data.percentage >= 75) bar.classList.add('bg-amber-500');
+        }
+    })
+    .catch(() => {});
+
+// Load anomaly alerts
+fetch('/api/v1/ai/anomalies')
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById('anomaly-alerts');
+        if (data.success && data.total_anomalies > 0) {
+            const high = data.high_severity || 0;
+            const html = `
+                <div class="p-3 ${high > 0 ? 'bg-red-50 border border-red-200 rounded-lg' : 'bg-amber-50 border border-amber-200 rounded-lg'}">
+                    <div class="flex items-center">
+                        <i data-lucide="${high > 0 ? 'alert-triangle' : 'alert-circle'}" class="h-5 w-5 ${high > 0 ? 'text-red-500' : 'text-amber-500'} mr-2"></i>
+                        <span class="font-medium ${high > 0 ? 'text-red-800' : 'text-amber-800'}">${data.total_anomalies} anomalies detected</span>
+                    </div>
+                    ${high > 0 ? `<p class="text-sm text-red-600 mt-1">${high} high severity requires attention</p>` : ''}
+                </div>
+            `;
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `
+                <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-blue-500 mr-2"></i>
+                    <span class="text-sm text-blue-800">No anomalies detected</span>
+                </div>
+            `;
+        }
+        lucide.createIcons();
+    })
+    .catch(() => {
+        document.getElementById('anomaly-alerts').innerHTML = '<p class="text-gray-500 text-sm">Unable to load anomalies</p>';
+    });
+
+// Load cashflow forecast
+fetch('/api/v1/ai/cashflow-forecast?months=3')
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById('cashflow-forecast');
+        if (data.success && data.forecast) {
+            let html = '';
+            data.forecast.forEach(f => {
+                const isPositive = f.predicted_net >= 0;
+                html += `
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                        <span class="text-sm text-gray-600">${f.month}</span>
+                        <span class="text-sm font-medium ${isPositive ? 'text-blue-600' : 'text-red-600'}">
+                            ${isPositive ? '+' : ''}$${Math.abs(f.predicted_net).toFixed(2)}
+                        </span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p class="text-gray-500 text-sm">' + (data.message || 'No forecast data available') + '</p>';
+        }
+    })
+    .catch(() => {
+        document.getElementById('cashflow-forecast').innerHTML = '<p class="text-gray-500 text-sm">Unable to load forecast</p>';
+    });
+</script>
 {% endblock %}

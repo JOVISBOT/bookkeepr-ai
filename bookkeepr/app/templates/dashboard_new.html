@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookKeepr AI - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">B</div>
+                <span class="logo-text">BookKeepr AI</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="/" class="nav-item active">
+                    <span class="nav-icon">Dashboard</span>
+                </a>
+                <a href="/transactions" class="nav-item">
+                    <span class="nav-icon">Transactions</span>
+                </a>
+                <a href="/accounts" class="nav-item">
+                    <span class="nav-icon">Accounts</span>
+                </a>
+                <a href="/reports" class="nav-item">
+                    <span class="nav-icon">Reports</span>
+                </a>
+                <a href="/settings" class="nav-item">
+                    <span class="nav-icon">Settings</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">{{ current_user.email[0]|upper }}</div>
+                    <div class="user-details">
+                        <p class="user-name">{{ current_user.email.split('@')[0] }}</p>
+                        <p class="user-role">Admin</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1 class="page-title">Dashboard</h1>
+                <div class="header-actions">
+                    <a href="/sync" class="btn btn-primary">Sync Now</a>
+                </div>
+            </header>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon total">$</div>
+                    <div class="stat-info">
+                        <h3>Total Balance</h3>
+                        <p class="stat-value">$12,450.00</p>
+                        <span class="stat-change positive">+5.2% this month</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon income">+</div>
+                    <div class="stat-info">
+                        <h3>Income MTD</h3>
+                        <p class="stat-value">$8,230.00</p>
+                        <span class="stat-change positive">+12% vs last month</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon expenses">-</div>
+                    <div class="stat-info">
+                        <h3>Expenses MTD</h3>
+                        <p class="stat-value">$3,120.00</p>
+                        <span class="stat-change negative">+8% vs last month</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon review">!</div>
+                    <div class="stat-info">
+                        <h3>Needs Review</h3>
+                        <p class="stat-value">{{ uncategorized_count|default(0) }}</p>
+                        <span class="stat-change">uncategorized transactions</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Actions -->
+            <div class="ai-actions">
+                <h2 class="section-title">AI Bookkeeping Actions</h2>
+                <div class="actions-grid">
+                    <div class="action-card">
+                        <div class="action-icon categorize">AI</div>
+                        <h3>Auto-Categorize</h3>
+                        <p>AI will categorize {{ uncategorized_count|default(0) }} transactions</p>
+                        <button class="btn btn-ai">Run AI Categorization</button>
+                    </div>
+                    
+                    <div class="action-card">
+                        <div class="action-icon reconcile">R</div>
+                        <h3>Reconcile Accounts</h3>
+                        <p>Match transactions with bank statements</p>
+                        <button class="btn btn-ai">Start Reconciliation</button>
+                    </div>
+                    
+                    <div class="action-card">
+                        <div class="action-icon report">R</div>
+                        <h3>Generate Report</h3>
+                        <p>Create P&L, Balance Sheet, or Cash Flow</p>
+                        <button class="btn btn-ai">Create Report</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="transactions-section">
+                <div class="section-header">
+                    <h2 class="section-title">Recent Transactions</h2>
+                    <a href="/transactions" class="btn btn-secondary">View All</a>
+                </div>
+                
+                <div class="transactions-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Account</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for txn in recent_transactions %}
+                            <tr>
+                                <td>{{ txn.date.strftime('%b %d') }}</td>
+                                <td>{{ txn.description|truncate(30) }}</td>
+                                <td>{{ txn.account.name if txn.account else 'Uncategorized' }}</td>
+                                <td class="{% if txn.amount > 0 %}positive{% else %}negative{% endif %}">
+                                    {% if txn.amount > 0 %}+{% endif %}${{ "%.2f"|format(txn.amount|abs) }}
+                                </td>
+                                <td>
+                                    <span class="status-badge {% if txn.category %}categorized{% else %}needs-review{% endif %}">
+                                        {% if txn.category %}Categorized{% else %}Needs Review{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="empty-state">No transactions yet. <a href="/sync">Sync now</a> to get started.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

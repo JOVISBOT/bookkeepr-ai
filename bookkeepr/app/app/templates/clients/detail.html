@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.qbo_company_name }} - BookKeepr AI{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mb-6">
+            <a href="{{ url_for('clients.index') }}" class="text-blue-600 hover:text-blue-800 text-sm">&larr; All Clients</a>
+            <div class="flex items-center justify-between mt-2">
+                <h1 class="text-3xl font-bold text-gray-900">{{ company.qbo_company_name or 'Unnamed Client' }}</h1>
+                <div class="flex space-x-2">
+                    <a href="{{ url_for('clients.edit', client_id=company.id) }}"
+                       class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        Edit
+                    </a>
+                    {% if not company.is_connected %}
+                    <a href="{{ url_for('quickbooks.connect') }}?company_id={{ company.id }}"
+                       class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                        Connect QuickBooks
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Info card -->
+            <div class="lg:col-span-1 bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Client Info</h3>
+                <dl class="space-y-3 text-sm">
+                    <div>
+                        <dt class="text-gray-500">Email</dt>
+                        <dd class="text-gray-900">{{ company.qbo_company_email or '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Phone</dt>
+                        <dd class="text-gray-900">{{ company.qbo_company_phone or '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Address</dt>
+                        <dd class="text-gray-900">{{ company.qbo_company_address or '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">QuickBooks</dt>
+                        <dd>
+                            {% if company.is_connected %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                Connected
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                Not connected
+                            </span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Sync Status</dt>
+                        <dd class="text-gray-900">{{ company.sync_status }}</dd>
+                    </div>
+                    {% if company.last_sync_at %}
+                    <div>
+                        <dt class="text-gray-500">Last Sync</dt>
+                        <dd class="text-gray-900">{{ company.last_sync_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <!-- Activity / Audit log -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
+                {% if recent_audit %}
+                <ul class="divide-y divide-gray-200">
+                    {% for log in recent_audit %}
+                    <li class="py-3">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ log.action|title }} by {{ log.user_email or 'system' }}
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                                </p>
+                                {% if log.new_value %}
+                                <p class="text-xs text-gray-600 mt-1">
+                                    {{ log.new_value|tojson|truncate(150) }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-500">No activity yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

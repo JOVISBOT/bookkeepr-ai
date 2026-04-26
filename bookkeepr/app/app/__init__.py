@@ -21,30 +21,60 @@ def create_app(config_name='default'):
     from app.routes.api import bp as api_bp
     from app.routes.quickbooks import bp as quickbooks_bp
     from app.routes.reconciliation import bp as reconciliation_bp
-    from app.routes.billing import billing_bp
+    from app.routes.billing import bp as billing_bp
     from app.routes.charts import bp as charts_bp
     from app.routes.reports import bp as reports_bp
     from app.routes.ai import bp as ai_bp
+    from app.routes.pricing import bp as pricing_bp
+    from app.routes.review import bp as review_bp
+    from app.routes.admin import bp as admin_bp
+    from app.routes.ai_enhanced import bp as ai_enhanced_bp
+    
+    from app.routes.banks import bp as banks_bp
+    from app.routes.clients import bp as clients_bp
+    from app.routes.mfa import bp as mfa_bp
+    from app.routes.imports import bp as imports_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
-    app.register_blueprint(api_bp, url_prefix='/api/v1')  # Added prefix
+    app.register_blueprint(api_bp, url_prefix='/api/v1')
     app.register_blueprint(quickbooks_bp, url_prefix='/quickbooks')
     app.register_blueprint(reconciliation_bp, url_prefix='/api/v1')
     app.register_blueprint(billing_bp)
     app.register_blueprint(charts_bp)
     app.register_blueprint(reports_bp)
+    # Reports blueprint handles both /dashboard/reports and /api/v1/reports/*
     app.register_blueprint(ai_bp, url_prefix='/api/v1/ai')
+    app.register_blueprint(pricing_bp)
+    app.register_blueprint(review_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(ai_enhanced_bp, url_prefix='/api/v1/ai')
+    app.register_blueprint(banks_bp)
+    app.register_blueprint(clients_bp)
+    app.register_blueprint(mfa_bp)
+    app.register_blueprint(imports_bp)
     
-    # Register catch-all route LAST (after all blueprints)
+    # Register catch-all route for React frontend (after all API routes)
     from flask import send_from_directory
     import os
+    
+    @app.route('/assets/<path:filename>')
+    def serve_assets(filename):
+        """Serve React static assets"""
+        static_dir = os.path.join(os.path.dirname(__file__), '..', 'static', 'assets')
+        return send_from_directory(static_dir, filename)
+    
+    @app.route('/static/css/<path:filename>')
+    def serve_css(filename):
+        """Serve theme CSS"""
+        css_dir = os.path.join(os.path.dirname(__file__), '..', 'static', 'css')
+        return send_from_directory(css_dir, filename)
     
     @app.route('/app', defaults={'path': ''})
     @app.route('/app/<path:path>')
     def serve_react(path):
-        """Serve React app for /app routes only"""
+        """Serve React app for /app routes"""
         static_dir = os.path.join(os.path.dirname(__file__), '..', 'static')
         
         # Check if file exists in dist folder
@@ -74,16 +104,52 @@ def create_app(config_name='default'):
 
 def register_error_handlers(app):
     """Register error handlers"""
-    from flask import render_template
+    from flask import render_template, request, jsonify
+    
+    @app.errorhandler(400)
+    def bad_request_error(error):
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Bad request'}), 400
+        return render_template('errors/400.html'), 400
+    
+    @app.errorhandler(401)
+    def unauthorized_error(error):
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        return render_template('errors/401.html'), 401
+    
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        return render_template('errors/403.html'), 403
     
     @app.errorhandler(404)
     def not_found_error(error):
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Resource not found'}), 404
         return render_template('errors/404.html'), 404
+    
+    @app.errorhandler(422)
+    def unprocessable_error(error):
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Validation failed'}), 422
+        return render_template('errors/422.html'), 422
     
     @app.errorhandler(500)
     def internal_error(error):
-        from extensions import db
         db.session.rollback()
+        app.logger.error(f'Internal error: {error}', exc_info=True)
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Internal server error'}), 500
+        return render_template('errors/500.html'), 500
+    
+    @app.errorhandler(Exception)
+    def catch_all_error(error):
+        db.session.rollback()
+        app.logger.error(f'Unhandled exception: {error}', exc_info=True)
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Unexpected error occurred'}), 500
         return render_template('errors/500.html'), 500
 
 

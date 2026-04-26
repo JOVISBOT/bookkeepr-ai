@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Import Transactions{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <h1 class="text-3xl font-bold text-gray-900">Import Transactions</h1>
+      <p class="text-gray-600 mt-1">Upload CSV from any bank — we auto-detect columns</p>
+    </div>
+  </div>
+
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bk-card">
+      <form method="POST" enctype="multipart/form-data" class="space-y-6">
+
+        <!-- Drop zone -->
+        <label class="block border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 transition-colors" id="dropZone">
+          <input type="file" name="csv_file" accept=".csv,.qbo,.ofx" required class="hidden" id="fileInput" />
+          <div class="inline-flex p-4 rounded-full mb-3" style="background: var(--bk-primary-light);">
+            <i data-lucide="upload-cloud" class="h-8 w-8" style="color: var(--bk-primary);"></i>
+          </div>
+          <p class="text-lg font-medium text-gray-900" id="fileName">Drop your file here</p>
+          <p class="text-sm text-gray-500 mt-1">or click to browse</p>
+          <p class="text-xs text-gray-400 mt-3">Supports: <strong>.csv</strong>, <strong>.qbo</strong>, <strong>.ofx</strong> from Chase, Bank of America, Wells Fargo, Capital One, US Bank, Citi, Mint, PayPal, Stripe, and more</p>
+        </label>
+
+        <!-- Tips -->
+        <div class="rounded-lg p-4" style="background: var(--bk-primary-light);">
+          <div class="flex items-start gap-3">
+            <i data-lucide="lightbulb" class="h-5 w-5 mt-0.5" style="color: var(--bk-primary);"></i>
+            <div class="text-sm text-gray-700">
+              <strong>Smart import:</strong>
+              <ul class="mt-1 space-y-1 list-disc list-inside text-gray-600">
+                <li>Auto-detects bank format (with or without header row)</li>
+                <li>Single Amount column OR separate Debit/Credit columns</li>
+                <li>QBO Web Connect (.qbo) and OFX direct import</li>
+                <li>Duplicates auto-skipped (same date + amount + description)</li>
+                <li>Preview before any data is saved</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <a href="/dashboard/transactions" class="bk-btn-secondary">Cancel</a>
+          <button type="submit" class="bk-btn-primary">
+            <i data-lucide="arrow-right" class="h-4 w-4"></i>
+            Preview Import
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone = document.getElementById('dropZone');
+const fileName = document.getElementById('fileName');
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) fileName.textContent = e.target.files[0].name;
+});
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-blue-500'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-blue-500'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('border-blue-500');
+  if (e.dataTransfer.files[0]) {
+    fileInput.files = e.dataTransfer.files;
+    fileName.textContent = e.dataTransfer.files[0].name;
+  }
+});
+</script>
+{% endblock %}
