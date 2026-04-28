@@ -259,6 +259,116 @@ def ai_categorize():
     return jsonify({'success': True, 'updated': updated})
 
 
+@bp.route('/transactions/bulk-approve', methods=['POST'])
+@login_required
+def bulk_approve():
+    from flask import request as req
+    from datetime import datetime
+    data = req.get_json(force=True) or {}
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'success': False, 'error': 'No IDs provided'}), 400
+
+    company = Company.query.filter_by(user_id=current_user.id, is_active=True).first()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company found'}), 404
+
+    txns = Transaction.query.filter(
+        Transaction.id.in_(ids),
+        Transaction.company_id == company.id
+    ).all()
+
+    now = datetime.utcnow()
+    updated = 0
+    for txn in txns:
+        txn.review_status = 'approved'
+        txn.reviewed_by_user_id = current_user.id
+        txn.reviewed_at = now
+        if txn.categorization_status == 'suggested' and txn.suggested_category:
+            txn.category = txn.suggested_category
+            txn.categorization_status = 'categorized'
+        updated += 1
+
+    db.session.commit()
+    return jsonify({'success': True, 'approved': updated})
+
+
+@bp.route('/transactions/bulk-qb-push', methods=['POST'])
+@login_required
+def bulk_qb_push():
+    from flask import request as req
+    data = req.get_json(force=True) or {}
+    ids = data.get('ids', [])
+    if not ids:
+        return jsonify({'success': False, 'error': 'No IDs provided'}), 400
+
+    company = Company.query.filter_by(user_id=current_user.id, is_active=True).first()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company found'}), 404
+
+    if not getattr(company, 'access_token', None) or not getattr(company, 'qbo_realm_id', None):
+        return jsonify({'success': False, 'error': 'QuickBooks not connected. Visit Settings → Connect QuickBooks first.'}), 400
+
+    txns = Transaction.query.filter(
+        Transaction.id.in_(ids),
+        Transaction.company_id == company.id,
+        Transaction.review_status == 'approved'
+    ).all()
+
+    if not txns:
+        return jsonify({'success': False, 'error': 'Select approved transactions to push (approve them first)'}), 400
+
+    pushed = 0
+    errors = []
+    try:
+        from quickbooks import QuickBooks
+        from quickbooks.objects.purchase import Purchase, PurchaseLine
+        from quickbooks.objects.ref import Ref
+        from app.services.qb_auth import QuickBooksAuthService
+
+        auth = QuickBooksAuthService()
+        client = QuickBooks(
+            consumer_key=auth.client_id,
+            consumer_secret=auth.client_secret,
+            access_token=company.access_token,
+            realm_id=company.qbo_realm_id,
+            sandbox=getattr(auth, 'environment', 'sandbox') == 'sandbox'
+        )
+
+        for txn in txns:
+            try:
+                p = Purchase()
+                p.PaymentType = 'Cash'
+                p.TotalAmt = abs(float(txn.amount or 0))
+                if txn.transaction_date:
+                    p.TxnDate = txn.transaction_date.strftime('%Y-%m-%d')
+                p.PrivateNote = (txn.description or '')[:999]
+
+                line = PurchaseLine()
+                line.Amount = abs(float(txn.amount or 0))
+                line.DetailType = 'AccountBasedExpenseLineDetail'
+                acct_ref = Ref()
+                acct_ref.name = txn.category or 'Uncategorized Expense'
+                line.AccountBasedExpenseLineDetail = {'AccountRef': {'name': acct_ref.name}}
+                p.Line = [line]
+                p.save(qb=client)
+
+                raw = txn.raw_data or {}
+                raw['qb_pushed'] = True
+                txn.raw_data = raw
+                pushed += 1
+            except Exception as e:
+                errors.append(f'#{txn.id}: {str(e)[:100]}')
+
+        db.session.commit()
+    except ImportError as e:
+        return jsonify({'success': False, 'error': f'QB library error: {e}'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    return jsonify({'success': True, 'pushed': pushed, 'errors': errors})
+
+
 @bp.route('/knowledge')
 @login_required
 def knowledge():

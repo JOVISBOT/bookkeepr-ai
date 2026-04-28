@@ -11,7 +11,7 @@ SQLAlchemy==2.0.23
 
 # AI/ML
 anthropic>=0.97.0
-scikit-learn==1.3.2
+scikit-learn==1.5.2
 numpy==1.26.2
 
 # QuickBooks

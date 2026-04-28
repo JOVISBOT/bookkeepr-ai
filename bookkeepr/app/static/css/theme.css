@@ -116,7 +116,7 @@ button, a, input, select, textarea {
 
 .bk-badge-success { background: var(--bk-success-bg); color: var(--bk-success); }
 .bk-badge-warning { background: var(--bk-warning-bg); color: var(--bk-warning); }
-.bk-badge-danger { background: var(--bk-danger-bg); color: var(--bk-danger); }
+.bk-badge-danger, .bk-badge-error { background: var(--bk-danger-bg); color: var(--bk-danger); }
 .bk-badge-info { background: var(--bk-primary-light); color: var(--bk-primary); }
 
 /* Tables - QBO-killer style */

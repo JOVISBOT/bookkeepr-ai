@@ -13,6 +13,9 @@
           <p class="text-gray-600 mt-1">{{ total }} transactions{% if company %} — {{ company.qbo_company_name or 'Your Company' }}{% endif %}</p>
         </div>
         <div class="flex gap-2">
+          <button id="aiCategorizeBtn" onclick="triggerAICategorize()" class="bk-btn-secondary">
+            <i data-lucide="sparkles" class="h-4 w-4"></i> AI Categorize All
+          </button>
           <button class="bk-btn-secondary" onclick="window.location.href='/review'">
             <i data-lucide="list-checks" class="h-4 w-4"></i> Review Queue
           </button>
@@ -46,7 +49,7 @@
     </div>
 
     <!-- Filter Bar -->
-    <div class="bk-card mb-6">
+    <div class="bk-card mb-4">
       <form method="GET" class="flex flex-wrap items-center gap-3">
         <h2 class="text-base font-semibold text-gray-900 mr-auto">All Transactions</h2>
         <input type="text" name="search" placeholder="Search description…" class="bk-input min-w-[200px]"
@@ -71,12 +74,35 @@
       </form>
     </div>
 
+    <!-- Bulk Action Bar (hidden until rows selected) -->
+    <div id="bulkBar" class="hidden bk-card mb-4 bg-blue-50 border border-blue-200">
+      <div class="flex items-center gap-3 flex-wrap">
+        <span id="bulkCount" class="text-sm font-semibold text-blue-900">0 selected</span>
+        <button onclick="bulkApprove()" class="bk-btn-primary text-sm">
+          <i data-lucide="check-circle" class="h-4 w-4"></i>
+          <span id="approveLabel">Approve Selected</span>
+        </button>
+        <button onclick="bulkQbPush()" class="bk-btn-secondary text-sm">
+          <i data-lucide="send" class="h-4 w-4"></i>
+          <span id="pushLabel">Push to QuickBooks</span>
+        </button>
+        <button onclick="clearSelection()" class="text-sm text-gray-500 hover:text-gray-700 ml-auto">
+          Clear selection
+        </button>
+      </div>
+      <div id="bulkMsg" class="hidden mt-2 text-sm"></div>
+    </div>
+
     <!-- Table -->
     <div class="bk-card p-0 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="bk-table" id="txnTable">
           <thead>
             <tr>
+              <th class="w-8">
+                <input type="checkbox" id="selectAll" onchange="toggleAll(this.checked)"
+                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+              </th>
               <th>Date</th>
               <th>Description</th>
               <th>Vendor</th>
@@ -88,7 +114,11 @@
           </thead>
           <tbody>
             {% for txn in transactions %}
-            <tr class="hover:bg-gray-50">
+            <tr class="hover:bg-gray-50 txn-row" data-id="{{ txn.id }}">
+              <td>
+                <input type="checkbox" class="row-check rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                       value="{{ txn.id }}" onchange="updateBulkBar()">
+              </td>
               <td class="text-sm text-gray-700 whitespace-nowrap">
                 {{ txn.transaction_date.strftime('%b %d, %Y') if txn.transaction_date else '—' }}
               </td>
@@ -100,12 +130,47 @@
                 {% if txn.amount > 0 %}text-green-600{% else %}text-red-600{% endif %}">
                 {% if txn.amount > 0 %}+{% endif %}${{ "%.2f"|format(txn.amount|abs) }}
               </td>
-              <td class="text-sm max-w-[200px] truncate" title="{{ txn.category }}">
+              <td class="text-sm max-w-[220px]">
                 {% if txn.category %}
-                  {{ txn.category }}
+                  <div class="truncate" title="{{ txn.category }}">{{ txn.category }}</div>
                   {% if txn.categorization_status == 'suggested' %}
-                    <span class="ml-1 text-xs text-blue-500">(suggested)</span>
+                    <div class="flex items-center gap-1 mt-0.5">
+                      <span class="text-xs text-blue-500">(AI suggestion)</span>
+                      {% if txn.suggested_confidence %}
+                        {% set conf = txn.suggested_confidence|int %}
+                        <span class="text-xs font-medium px-1.5 py-0.5 rounded-full
+                          {% if conf >= 80 %}bg-green-100 text-green-700
+                          {% elif conf >= 50 %}bg-yellow-100 text-yellow-700
+                          {% else %}bg-red-100 text-red-700{% endif %}">
+                          {{ conf }}%
+                        </span>
+                      {% endif %}
+                    </div>
+                  {% elif txn.categorized_by == 'ai' and txn.suggested_confidence %}
+                    {% set conf = txn.suggested_confidence|int %}
+                    <span class="text-xs font-medium px-1.5 py-0.5 rounded-full mt-0.5 inline-block
+                      {% if conf >= 80 %}bg-green-100 text-green-700
+                      {% elif conf >= 50 %}bg-yellow-100 text-yellow-700
+                      {% else %}bg-red-100 text-red-700{% endif %}">
+                      AI {{ conf }}%
+                    </span>
                   {% endif %}
+                {% elif txn.suggested_category %}
+                  <div class="text-blue-700 font-medium truncate" title="{{ txn.suggested_category }}">
+                    {{ txn.suggested_category }}
+                  </div>
+                  <div class="flex items-center gap-1 mt-0.5">
+                    <span class="text-xs text-blue-500">AI suggestion</span>
+                    {% if txn.suggested_confidence %}
+                      {% set conf = txn.suggested_confidence|int %}
+                      <span class="text-xs font-medium px-1.5 py-0.5 rounded-full
+                        {% if conf >= 80 %}bg-green-100 text-green-700
+                        {% elif conf >= 50 %}bg-yellow-100 text-yellow-700
+                        {% else %}bg-red-100 text-red-700{% endif %}">
+                        {{ conf }}%
+                      </span>
+                    {% endif %}
+                  </div>
                 {% else %}
                   <span class="text-gray-400 italic">Uncategorized</span>
                 {% endif %}
@@ -130,7 +195,7 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="7" class="text-center py-12">
+              <td colspan="8" class="text-center py-12">
                 <div class="inline-flex p-4 rounded-full mb-3" style="background: var(--bk-primary-light);">
                   <i data-lucide="receipt" class="h-8 w-8" style="color: var(--bk-primary);"></i>
                 </div>
@@ -183,8 +248,6 @@
 let rcTxnId = null;
 
 {% if gaap_accounts is not defined %}
-// gaap_accounts not in template context — load from API
-let gaapAccountOptions = [];
 fetch('/api/v1/companies/{{ company.id if company else 0 }}/accounts')
   .then(r => r.json())
   .then(data => {
@@ -216,10 +279,6 @@ async function submitReclassify() {
   const custom = document.getElementById('rcCustomCat').value.trim();
   if (!accountId && !custom) { alert('Select an account or enter a category.'); return; }
 
-  const payload = accountId
-    ? {account_id: parseInt(accountId), action: 'correct'}
-    : {category: custom};
-
   let r;
   if (accountId) {
     r = await fetch(`/api/v1/transactions/${rcTxnId}/review`, {
@@ -236,22 +295,143 @@ async function submitReclassify() {
   }
 
   const data = await r.json();
-  if (data.success) {
-    closeReclassify();
-    location.reload();
-  } else {
-    alert('Error: ' + data.error);
-  }
+  if (data.success) { closeReclassify(); location.reload(); }
+  else { alert('Error: ' + data.error); }
 }
 
-// Close modal on backdrop click
 document.getElementById('reclassifyModal').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeReclassify();
 });
 
+// ── Bulk selection ────────────────────────────────────────────────────────────
+
+function getSelectedIds() {
+  return Array.from(document.querySelectorAll('.row-check:checked')).map(c => parseInt(c.value));
+}
+
+function toggleAll(checked) {
+  document.querySelectorAll('.row-check').forEach(c => c.checked = checked);
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const ids = getSelectedIds();
+  const bar = document.getElementById('bulkBar');
+  const count = document.getElementById('bulkCount');
+  const selectAll = document.getElementById('selectAll');
+  const all = document.querySelectorAll('.row-check');
+
+  count.textContent = ids.length + ' selected';
+  bar.classList.toggle('hidden', ids.length === 0);
+  document.getElementById('approveLabel').textContent = `Approve Selected (${ids.length})`;
+  document.getElementById('pushLabel').textContent = `Push to QuickBooks (${ids.length})`;
+
+  const checked = document.querySelectorAll('.row-check:checked').length;
+  selectAll.indeterminate = checked > 0 && checked < all.length;
+  selectAll.checked = checked === all.length && all.length > 0;
+}
+
+function clearSelection() {
+  document.querySelectorAll('.row-check').forEach(c => c.checked = false);
+  document.getElementById('selectAll').checked = false;
+  updateBulkBar();
+}
+
+function showBulkMsg(msg, isError) {
+  const el = document.getElementById('bulkMsg');
+  el.className = 'mt-2 text-sm ' + (isError ? 'text-red-600' : 'text-green-700');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+async function bulkApprove() {
+  const ids = getSelectedIds();
+  if (!ids.length) return;
+  const btn = document.querySelector('[onclick="bulkApprove()"]');
+  btn.disabled = true;
+  btn.textContent = 'Approving…';
+  try {
+    const r = await fetch('/dashboard/transactions/bulk-approve', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ids}),
+    });
+    const data = await r.json();
+    if (data.success) {
+      showBulkMsg(`✓ Approved ${data.approved} transaction${data.approved !== 1 ? 's' : ''}`, false);
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      showBulkMsg('Error: ' + data.error, true);
+      btn.disabled = false;
+      btn.textContent = 'Approve Selected';
+    }
+  } catch (e) {
+    showBulkMsg('Network error: ' + e.message, true);
+    btn.disabled = false;
+    btn.textContent = 'Approve Selected';
+  }
+}
+
+async function bulkQbPush() {
+  const ids = getSelectedIds();
+  if (!ids.length) return;
+  const btn = document.querySelector('[onclick="bulkQbPush()"]');
+  btn.disabled = true;
+  btn.textContent = 'Pushing…';
+  try {
+    const r = await fetch('/dashboard/transactions/bulk-qb-push', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ids}),
+    });
+    const data = await r.json();
+    if (data.success) {
+      let msg = `✓ Pushed ${data.pushed} to QuickBooks`;
+      if (data.errors && data.errors.length) msg += ` (${data.errors.length} errors)`;
+      showBulkMsg(msg, false);
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showBulkMsg('Error: ' + data.error, true);
+      btn.disabled = false;
+      btn.textContent = 'Push to QuickBooks';
+    }
+  } catch (e) {
+    showBulkMsg('Network error: ' + e.message, true);
+    btn.disabled = false;
+    btn.textContent = 'Push to QuickBooks';
+  }
+}
+
+// ── AI Categorize All ─────────────────────────────────────────────────────────
+
+async function triggerAICategorize() {
+  const btn = document.getElementById('aiCategorizeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="animate-spin inline-block">⟳</span> Running AI…';
+  try {
+    const r = await fetch('/dashboard/ai-categorize', {method: 'POST'});
+    const data = await r.json();
+    if (data.success) {
+      btn.innerHTML = `✓ Categorized ${data.updated}`;
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      btn.innerHTML = 'Error: ' + (data.error || 'unknown');
+      setTimeout(() => {
+        btn.innerHTML = '<i data-lucide="sparkles" class="h-4 w-4"></i> AI Categorize All';
+        btn.disabled = false;
+        lucide.createIcons();
+      }, 3000);
+    }
+  } catch (e) {
+    btn.innerHTML = 'Network error';
+    btn.disabled = false;
+  }
+}
+
 lucide.createIcons();
 
-// ── Natural Language Query ────────────────────────────────────────────────
+// ── Natural Language Query ────────────────────────────────────────────────────
 async function runNLQ() {
   const input = document.getElementById('nlqInput');
   const btn = document.getElementById('nlqBtn');
@@ -277,7 +457,6 @@ async function runNLQ() {
     const amount = data.total_amount || 0;
     const sign = amount >= 0 ? '+' : '';
 
-    // Show result summary
     result.classList.remove('hidden');
     result.innerHTML = `
       <div class="flex items-center justify-between">
@@ -288,12 +467,11 @@ async function runNLQ() {
         <button onclick="clearNLQ()" class="text-purple-600 hover:underline text-xs">Clear</button>
       </div>`;
 
-    // Rewrite table body
-    const tbody = document.querySelector('#txnTable tbody') || document.querySelector('table tbody');
+    const tbody = document.querySelector('#txnTable tbody');
     if (!tbody) return;
 
     if (txns.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400 py-12">No results found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center text-gray-400 py-12">No results found</td></tr>';
     } else {
       tbody.innerHTML = txns.map(t => {
         const amt = parseFloat(t.amount || 0);
@@ -307,6 +485,7 @@ async function runNLQ() {
           ? '<span class="bk-badge bk-badge-warning">Review</span>'
           : '<span class="bk-badge">Pending</span>';
         return `<tr class="hover:bg-gray-50">
+          <td><input type="checkbox" class="row-check rounded border-gray-300" value="${t.id}" onchange="updateBulkBar()"></td>
           <td class="text-sm text-gray-700 whitespace-nowrap">${date}</td>
           <td class="font-medium max-w-xs truncate" title="${t.description || ''}">${t.description || '—'}</td>
           <td class="text-gray-600 text-sm">${t.vendor_name || t.customer_name || '—'}</td>
