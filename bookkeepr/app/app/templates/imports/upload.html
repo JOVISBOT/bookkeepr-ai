@@ -15,6 +15,7 @@
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="bk-card">
       <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Drop zone -->
         <label class="block border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 transition-colors" id="dropZone">

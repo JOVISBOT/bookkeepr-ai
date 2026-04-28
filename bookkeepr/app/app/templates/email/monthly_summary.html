@@ -1,0 +1,41 @@
+{% extends "email/base.html" %}
+{% block subject %}{{ company_name }} — {{ period_label }} summary{% endblock %}
+
+{% block content %}
+<h1>{{ period_label }} Summary</h1>
+<p>Hi {{ first_name }}, here's the financial snapshot for <strong>{{ company_name }}</strong>.</p>
+
+<div class="stat-row">
+  <div class="stat">
+    <div class="stat-value">${{ '{:,.0f}'.format(revenue) }}</div>
+    <div class="stat-label">Revenue</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">${{ '{:,.0f}'.format(expenses) }}</div>
+    <div class="stat-label">Expenses</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color:{{ '#16a34a' if net_income >= 0 else '#dc2626' }}">
+      {{ '-' if net_income < 0 else '' }}${{ '{:,.0f}'.format(net_income|abs) }}
+    </div>
+    <div class="stat-label">Net Income</div>
+  </div>
+</div>
+
+{% if top_categories %}
+<p><strong>Top expense categories</strong></p>
+{% for cat in top_categories %}
+<div class="category-row">
+  <span>{{ cat.name }}</span>
+  <span style="font-weight:600">${{ '{:,.2f}'.format(cat.amount) }}</span>
+</div>
+{% endfor %}
+{% endif %}
+
+<hr class="divider">
+<p class="meta">{{ transaction_count }} transaction{{ 's' if transaction_count != 1 else '' }} processed this period.</p>
+
+<p style="text-align:center; margin:24px 0;">
+  <a class="btn" href="{{ report_url }}">View Full Report →</a>
+</p>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Invite Client — {{ company.qbo_company_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-10">
+
+  <div class="mb-6">
+    <a href="{{ url_for('clients.detail', client_id=company.id) }}" class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+      <i data-lucide="arrow-left" class="h-4 w-4"></i> Back to {{ company.qbo_company_name }}
+    </a>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
+      <h1 class="text-2xl font-bold text-white">Invite Client to Portal</h1>
+      <p class="text-blue-100 mt-1">Give <strong>{{ company.qbo_company_name }}</strong> access to their financial dashboard</p>
+    </div>
+
+    {% if existing_client %}
+    <div class="bg-green-50 border-b border-green-100 px-8 py-4 flex items-center gap-3">
+      <i data-lucide="check-circle" class="h-5 w-5 text-green-600 flex-shrink-0"></i>
+      <div>
+        <p class="text-sm font-medium text-green-800">Client portal already active</p>
+        <p class="text-xs text-green-600">{{ existing_client.email }} has access to this company's portal.</p>
+      </div>
+      <a href="mailto:{{ existing_client.email }}" class="ml-auto text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">Email Client</a>
+    </div>
+    {% endif %}
+
+    <form method="POST" class="px-8 py-6 space-y-5">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+          <input type="text" name="first_name" value="{{ existing_client.first_name if existing_client else '' }}"
+            placeholder="Jane" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+          <input type="text" name="last_name" value="{{ existing_client.last_name if existing_client else '' }}"
+            placeholder="Smith" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Client Email <span class="text-red-500">*</span></label>
+        <input type="email" name="email" required
+          value="{{ existing_client.email if existing_client else (company.qbo_company_email or '') }}"
+          placeholder="client@theircompany.com"
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <p class="text-xs text-gray-400 mt-1">A temporary password will be generated. Share it securely with your client.</p>
+      </div>
+
+      <div class="bg-blue-50 rounded-xl p-4 text-sm text-blue-800 border border-blue-100">
+        <strong>What your client will see:</strong>
+        <ul class="mt-2 space-y-1 list-disc list-inside text-blue-700">
+          <li>Monthly P&L summary and cash position</li>
+          <li>Transaction history with categories</li>
+          <li>Financial reports (PDF download)</li>
+          <li>Ability to flag transactions for review</li>
+        </ul>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="submit"
+          class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+          <i data-lucide="send" class="h-4 w-4"></i>
+          {% if existing_client %}Update Access{% else %}Create Client Login{% endif %}
+        </button>
+        <a href="{{ url_for('clients.detail', client_id=company.id) }}"
+          class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Portal URL info -->
+  <div class="mt-6 bg-gray-50 rounded-xl border border-gray-200 px-6 py-4">
+    <p class="text-sm font-medium text-gray-700">Client portal URL</p>
+    <div class="flex items-center gap-2 mt-1">
+      <code class="text-sm text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg flex-1">{{ request.host_url }}portal/</code>
+      <button onclick="navigator.clipboard.writeText('{{ request.host_url }}portal/')"
+        class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded-lg transition-colors">Copy</button>
+    </div>
+  </div>
+
+</div>
+<script>lucide.createIcons();</script>
+{% endblock %}

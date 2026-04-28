@@ -1,5 +1,6 @@
 """Pricing Page Routes"""
 from flask import Blueprint, render_template
+from app.services.stripe_service import stripe_enabled
 
 bp = Blueprint('pricing', __name__)
 
@@ -9,6 +10,7 @@ def index():
     """Pricing page with 4 tiers"""
     plans = [
         {
+            'slug': 'starter',
             'name': 'Starter',
             'price': 199,
             'description': 'Perfect for freelancers and solo bookkeepers',
@@ -29,6 +31,7 @@ def index():
             'popular': False,
         },
         {
+            'slug': 'pro',
             'name': 'Pro',
             'price': 499,
             'description': 'For growing firms with multiple clients',
@@ -49,6 +52,7 @@ def index():
             'popular': True,
         },
         {
+            'slug': 'business',
             'name': 'Business',
             'price': 999,
             'description': 'For established practices needing automation',
@@ -69,6 +73,7 @@ def index():
             'popular': False,
         },
         {
+            'slug': 'enterprise',
             'name': 'Enterprise',
             'price': 2499,
             'description': 'White-glove service for large firms',
@@ -102,4 +107,5 @@ def index():
         {'name': 'Account Manager', 'starter': False, 'pro': False, 'business': False, 'enterprise': True},
     ]
     
-    return render_template('pricing.html', plans=plans, comparison=comparison_features)
+    return render_template('pricing.html', plans=plans, comparison=comparison_features,
+                           stripe_enabled=stripe_enabled())

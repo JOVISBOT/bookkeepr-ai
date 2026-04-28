@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, case
 
 from extensions import db
 from app.models.user import User
@@ -65,7 +65,7 @@ def index():
     ai_accuracy = db.session.query(
         func.date(Transaction.categorized_at).label('date'),
         func.count().label('total'),
-        func.sum(func.case((Transaction.review_status == 'approved', 1), else_=0)).label('approved')
+        func.sum(case((Transaction.review_status == 'approved', 1), else_=0)).label('approved')
     ).filter(
         Transaction.categorized_by == 'ai',
         Transaction.categorized_at >= datetime.utcnow() - timedelta(days=30)
@@ -213,8 +213,8 @@ def ai_accuracy():
     by_category = db.session.query(
         Transaction.suggested_category,
         func.count().label('total'),
-        func.sum(func.case((Transaction.review_status == 'approved', 1), else_=0)).label('approved'),
-        func.sum(func.case((Transaction.review_status == 'rejected', 1), else_=0)).label('rejected')
+        func.sum(case((Transaction.review_status == 'approved', 1), else_=0)).label('approved'),
+        func.sum(case((Transaction.review_status == 'rejected', 1), else_=0)).label('rejected')
     ).filter(
         Transaction.categorized_by == 'ai',
         Transaction.categorized_at >= cutoff,
@@ -246,20 +246,24 @@ def ai_accuracy():
 
 def _check_db_health():
     """Check database health"""
+    from sqlalchemy import inspect, text, Table, MetaData, select, func as sqlfunc
     try:
-        # Test connection
-        db.session.execute('SELECT 1')
-        
-        # Get table sizes
-        from sqlalchemy import inspect
+        db.session.execute(text('SELECT 1'))
+
         inspector = inspect(db.engine)
-        
+        metadata = MetaData()
+        metadata.reflect(bind=db.engine)
+
         table_info = []
         for table_name in inspector.get_table_names():
             try:
-                count = db.session.execute(f"SELECT COUNT(*) FROM {table_name}").scalar()
+                table_obj = metadata.tables.get(table_name)
+                if table_obj is not None:
+                    count = db.session.execute(select(sqlfunc.count()).select_from(table_obj)).scalar()
+                else:
+                    count = -1
                 table_info.append({'name': table_name, 'rows': count})
-            except:
+            except Exception:
                 table_info.append({'name': table_name, 'rows': -1})
         
         return {

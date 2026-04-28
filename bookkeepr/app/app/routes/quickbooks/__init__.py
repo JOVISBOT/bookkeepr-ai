@@ -1,9 +1,15 @@
-"""QuickBooks Routes - OAuth and Connection Management"""
+﻿"""QuickBooks Routes - OAuth and Connection Management"""
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from app.models.company import Company
 from app.services.qb_auth import QuickBooksAuthService as AuthService
+
+try:
+    from app.routes.quickbooks.scheduler import init_scheduler, SchedulerConfig
+except ImportError:
+    init_scheduler = None
+    SchedulerConfig = None
 
 bp = Blueprint('quickbooks', __name__)
 
@@ -12,13 +18,15 @@ bp = Blueprint('quickbooks', __name__)
 @login_required
 def connect():
     """Initiate QuickBooks OAuth connection"""
+    import secrets
     try:
         auth_service = AuthService()
-        auth_url = auth_service.get_authorization_url()
-        
-        # Store state in session for CSRF protection
+        # Generate and store state token for CSRF protection
+        state = secrets.token_urlsafe(32)
+        session['qbo_oauth_state'] = state
+        auth_url = auth_service.get_authorization_url(state=state)
         return redirect(auth_url)
-        
+
     except Exception as e:
         current_app.logger.error(f"OAuth initiation failed: {str(e)}")
         flash('Failed to initiate QuickBooks connection. Please try again.', 'error')
@@ -28,13 +36,35 @@ def connect():
 @bp.route('/callback')
 def callback():
     """Handle OAuth callback from Intuit"""
+    from flask import abort
     auth_code = request.args.get('code')
     realm_id = request.args.get('realmId')
-    state = request.args.get('state')
-    
+    returned_state = request.args.get('state')
+
+    # Validate CSRF state — prevents attackers from hijacking OAuth flow
+    expected_state = session.pop('qbo_oauth_state', None)
+    if not expected_state or returned_state != expected_state:
+        current_app.logger.warning(
+            f"OAuth state mismatch: expected={expected_state!r} got={returned_state!r}"
+        )
+        flash('Invalid OAuth state. Please try connecting again.', 'error')
+        return redirect(url_for('dashboard.company_settings'))
+
     if not auth_code or not realm_id:
         flash('Authentication failed. Please try again.', 'error')
         return redirect(url_for('dashboard.company_settings'))
+
+    # Refuse sandbox tokens in production mode
+    intuit_env = current_app.config.get('INTUIT_ENVIRONMENT', 'sandbox')
+    auth_service_env = 'sandbox' if 'sandbox' in request.args.get('realmId', realm_id) else 'production'
+    # A more reliable check: if config says production, reject any connection initiated via sandbox OAuth URL
+    if intuit_env == 'production':
+        from app.services.qb_auth import QuickBooksAuthService as _AuthCheck
+        _check = _AuthCheck()
+        if getattr(_check, 'environment', 'sandbox') == 'sandbox':
+            flash('Cannot connect a sandbox QuickBooks account in production mode. '
+                  'Set INTUIT_ENVIRONMENT=production and use production credentials.', 'error')
+            return redirect(url_for('dashboard.company_settings'))
     
     try:
         # Exchange code for tokens
@@ -47,24 +77,52 @@ def callback():
         
         # Create or update company connection
         company = Company.query.filter_by(qbo_realm_id=realm_id).first()
-        
+
         if not company:
             company = Company(
                 user_id=current_user.id,
-                tenant_id=current_user.tenant_id,
+                tenant_id=current_user.tenant_id if hasattr(current_user, 'tenant_id') else None,
                 qbo_realm_id=realm_id,
                 is_active=True,
             )
             db.session.add(company)
-        
+
         # Update tokens
         company.access_token = tokens['access_token']
         company.refresh_token = tokens['refresh_token']
         company.token_expires_at = expires_at
         company.is_connected = True
-        
+
+        # Fetch company name from QBO CompanyInfo endpoint
+        try:
+            import requests as _requests
+            base = 'https://sandbox-quickbooks.api.intuit.com' if auth_service.environment == 'sandbox' else 'https://quickbooks.api.intuit.com'
+            info_resp = _requests.get(
+                f'{base}/v3/company/{realm_id}/companyinfo/{realm_id}',
+                headers={
+                    'Authorization': f'Bearer {tokens["access_token"]}',
+                    'Accept': 'application/json',
+                },
+                timeout=10,
+            )
+            if info_resp.ok:
+                company_name = info_resp.json().get('CompanyInfo', {}).get('CompanyName')
+                if company_name:
+                    company.qbo_company_name = company_name
+        except Exception as name_err:
+            current_app.logger.warning(f'Could not fetch QBO company name: {name_err}')
+
         db.session.commit()
-        
+
+        # Seed GAAP chart of accounts + common vendor knowledge so the app works immediately
+        try:
+            from app.services.gaap_coa import seed_gaap_accounts
+            from app.services.vendor_seeds import seed_vendor_knowledge
+            seed_gaap_accounts(company.id)
+            seed_vendor_knowledge(company.id)
+        except Exception as seed_err:
+            current_app.logger.warning(f'Seed failed (non-fatal): {seed_err}')
+
         # Trigger initial sync of accounts + transactions (don't fail connection if errors)
         sync_summary = {'accounts': 0, 'transactions': 0, 'errors': []}
         try:
@@ -123,9 +181,9 @@ def disconnect(company_id):
     
     try:
         # Revoke tokens
-        if company.refresh_token:
+        if company.access_token:
             auth_service = AuthService()
-            auth_service.revoke_token(company.refresh_token)
+            auth_service.disconnect(company.access_token)
         
         # Update company
         company.is_connected = False
@@ -182,3 +240,4 @@ def status(company_id):
         'sync_status': company.sync_status,
         'company_name': company.qbo_company_name
     }
+

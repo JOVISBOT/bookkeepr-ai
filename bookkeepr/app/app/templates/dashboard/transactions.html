@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block title %}Transactions{% endblock %}
 
 {% block content %}
@@ -11,75 +10,122 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-3xl font-bold text-gray-900">Transactions</h1>
-          <p class="text-gray-600 mt-1">All your imported and synced transactions</p>
+          <p class="text-gray-600 mt-1">{{ total }} transactions{% if company %} — {{ company.qbo_company_name or 'Your Company' }}{% endif %}</p>
         </div>
-        <button class="bk-btn-primary" onclick="window.location.href='/imports/csv'">
-          <i data-lucide="upload" class="h-4 w-4"></i>
-          Import Transactions
-        </button>
+        <div class="flex gap-2">
+          <button class="bk-btn-secondary" onclick="window.location.href='/review'">
+            <i data-lucide="list-checks" class="h-4 w-4"></i> Review Queue
+          </button>
+          <button class="bk-btn-primary" onclick="window.location.href='/imports/csv'">
+            <i data-lucide="upload" class="h-4 w-4"></i> Import CSV
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Content -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- AI Natural Language Search -->
+    <div class="bk-card mb-4" style="background:linear-gradient(135deg,#ede9fe,#dbeafe)">
+      <div class="flex items-center gap-2 mb-2">
+        <i data-lucide="sparkles" class="h-4 w-4 text-purple-600"></i>
+        <span class="text-sm font-semibold text-purple-800">Ask AI</span>
+        <span class="text-xs text-purple-500">Natural language search</span>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" id="nlqInput"
+               placeholder="e.g. "travel expenses last quarter over $200" or "Amazon purchases this month""
+               class="bk-input flex-1"
+               onkeydown="if(event.key==='Enter') runNLQ()">
+        <button onclick="runNLQ()" id="nlqBtn" class="bk-btn-primary whitespace-nowrap">
+          <i data-lucide="search" class="h-4 w-4"></i> Search
+        </button>
+      </div>
+      <div id="nlqResult" class="hidden mt-3 text-sm text-purple-800 bg-white/60 rounded-lg px-3 py-2"></div>
+    </div>
 
     <!-- Filter Bar -->
     <div class="bk-card mb-6">
-      <div class="flex flex-wrap items-center gap-3">
-        <h2 class="text-lg font-semibold text-gray-900 mr-auto">All Transactions</h2>
-        <input type="text" placeholder="Search..." class="bk-input min-w-[240px]" id="searchTxn" />
-        <select class="bk-input" id="filterCategory">
+      <form method="GET" class="flex flex-wrap items-center gap-3">
+        <h2 class="text-base font-semibold text-gray-900 mr-auto">All Transactions</h2>
+        <input type="text" name="search" placeholder="Search description…" class="bk-input min-w-[200px]"
+               value="{{ request.args.get('search', '') }}">
+        <select name="category" class="bk-input">
           <option value="">All Categories</option>
-          <option value="uncategorized">Uncategorized</option>
-          <option value="categorized">Categorized</option>
+          <option value="uncategorized" {% if request.args.get('category')=='uncategorized' %}selected{% endif %}>Uncategorized</option>
+          <option value="suggested"     {% if request.args.get('category')=='suggested'     %}selected{% endif %}>Needs Review</option>
+          <option value="categorized"   {% if request.args.get('category')=='categorized'   %}selected{% endif %}>Categorized</option>
         </select>
-        <select class="bk-input" id="filterStatus">
+        <select name="status" class="bk-input">
           <option value="">All Status</option>
-          <option value="needs_review">Needs Review</option>
-          <option value="approved">Approved</option>
+          <option value="needs_review" {% if request.args.get('status')=='needs_review' %}selected{% endif %}>Pending</option>
+          <option value="approved"     {% if request.args.get('status')=='approved'     %}selected{% endif %}>Approved</option>
         </select>
-        <button class="bk-btn-secondary" onclick="applyFilters()">
-          <i data-lucide="filter" class="h-4 w-4"></i>
-          Apply
+        <button type="submit" class="bk-btn-secondary">
+          <i data-lucide="filter" class="h-4 w-4"></i> Filter
         </button>
-      </div>
+        {% if request.args %}
+        <a href="{{ url_for('dashboard.transactions') }}" class="text-sm text-gray-500 hover:text-gray-700">Clear</a>
+        {% endif %}
+      </form>
     </div>
 
     <!-- Table -->
     <div class="bk-card p-0 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="bk-table">
+        <table class="bk-table" id="txnTable">
           <thead>
             <tr>
               <th>Date</th>
               <th>Description</th>
-              <th>Vendor/Customer</th>
+              <th>Vendor</th>
               <th class="text-right">Amount</th>
-              <th>Category</th>
+              <th>Account / Category</th>
               <th>Status</th>
               <th class="text-right">Actions</th>
             </tr>
           </thead>
-          <tbody id="txnTbody">
+          <tbody>
             {% for txn in transactions %}
-            <tr>
-              <td class="text-sm text-gray-700">{{ txn.transaction_date.strftime('%b %d, %Y') if txn.transaction_date else '-' }}</td>
-              <td class="font-medium">{{ txn.description or '-' }}</td>
-              <td class="text-gray-600">{{ txn.vendor_name or txn.customer_name or '-' }}</td>
-              <td class="text-right tabular-nums {% if txn.amount > 0 %}text-green-600{% else %}text-red-600{% endif %} font-medium">
+            <tr class="hover:bg-gray-50">
+              <td class="text-sm text-gray-700 whitespace-nowrap">
+                {{ txn.transaction_date.strftime('%b %d, %Y') if txn.transaction_date else '—' }}
+              </td>
+              <td class="font-medium max-w-xs truncate" title="{{ txn.description }}">
+                {{ txn.description or '—' }}
+              </td>
+              <td class="text-gray-600 text-sm">{{ txn.vendor_name or txn.customer_name or '—' }}</td>
+              <td class="text-right tabular-nums font-medium whitespace-nowrap
+                {% if txn.amount > 0 %}text-green-600{% else %}text-red-600{% endif %}">
                 {% if txn.amount > 0 %}+{% endif %}${{ "%.2f"|format(txn.amount|abs) }}
               </td>
-              <td class="text-gray-700">{{ txn.category or 'Uncategorized' }}</td>
-              <td>
+              <td class="text-sm max-w-[200px] truncate" title="{{ txn.category }}">
                 {% if txn.category %}
-                  <span class="bk-badge bk-badge-success">Categorized</span>
+                  {{ txn.category }}
+                  {% if txn.categorization_status == 'suggested' %}
+                    <span class="ml-1 text-xs text-blue-500">(suggested)</span>
+                  {% endif %}
                 {% else %}
-                  <span class="bk-badge bk-badge-warning">Needs Review</span>
+                  <span class="text-gray-400 italic">Uncategorized</span>
                 {% endif %}
               </td>
-              <td class="text-right">
-                <a href="#" class="bk-btn-secondary text-xs">View</a>
+              <td>
+                {% if txn.review_status == 'approved' %}
+                  <span class="bk-badge bk-badge-success">Approved</span>
+                {% elif txn.categorization_status == 'suggested' %}
+                  <span class="bk-badge bk-badge-warning">Needs Review</span>
+                {% elif txn.review_status == 'flagged' %}
+                  <span class="bk-badge bk-badge-error">Flagged</span>
+                {% else %}
+                  <span class="bk-badge bk-badge-warning">Pending</span>
+                {% endif %}
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <a href="{{ url_for('dashboard.transaction_detail', transaction_id=txn.id) }}"
+                   class="bk-btn-secondary text-xs mr-1">Edit</a>
+                <button onclick="openReclassify({{ txn.id }}, {{ txn.category|tojson }})"
+                        class="bk-btn-secondary text-xs">Reclassify</button>
               </td>
             </tr>
             {% else %}
@@ -88,16 +134,14 @@
                 <div class="inline-flex p-4 rounded-full mb-3" style="background: var(--bk-primary-light);">
                   <i data-lucide="receipt" class="h-8 w-8" style="color: var(--bk-primary);"></i>
                 </div>
-                <p class="text-gray-700 font-medium mb-1">No transactions yet</p>
-                <p class="text-gray-500 text-sm mb-4">Sync from QuickBooks or import a CSV to get started</p>
+                <p class="text-gray-700 font-medium mb-1">No transactions found</p>
+                <p class="text-gray-500 text-sm mb-4">Try clearing filters, or import a CSV to get started</p>
                 <div class="flex gap-2 justify-center">
-                  <button class="bk-btn-primary" onclick="window.location.href='/quickbooks/connect'">
-                    <i data-lucide="refresh-cw" class="h-4 w-4"></i>
-                    Connect QuickBooks
+                  <button class="bk-btn-primary" onclick="window.location.href='/imports/csv'">
+                    <i data-lucide="upload" class="h-4 w-4"></i> Upload CSV
                   </button>
-                  <button class="bk-btn-secondary">
-                    <i data-lucide="upload" class="h-4 w-4"></i>
-                    Upload CSV
+                  <button class="bk-btn-secondary" onclick="window.location.href='/quickbooks/connect'">
+                    Connect QuickBooks
                   </button>
                 </div>
               </td>
@@ -107,22 +151,188 @@
         </table>
       </div>
     </div>
+
+  </div>
+</div>
+
+<!-- Reclassify Modal -->
+<div id="reclassifyModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Reclassify Transaction</h3>
+    <p class="text-sm text-gray-600 mb-3">Current: <span id="rcCurrentCat" class="font-medium text-gray-900"></span></p>
+
+    <label class="block text-sm font-medium text-gray-700 mb-1">New Category / Account</label>
+    <select id="rcAccountSel" class="bk-input w-full mb-3">
+      <option value="">— Select account —</option>
+      {% for acct in gaap_accounts %}
+      <option value="{{ acct.id }}">{{ acct.account_number }} {{ acct.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label class="block text-sm font-medium text-gray-700 mb-1">Or type custom category</label>
+    <input id="rcCustomCat" type="text" class="bk-input w-full mb-4" placeholder="Custom category name…">
+
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeReclassify()" class="bk-btn-secondary">Cancel</button>
+      <button onclick="submitReclassify()" class="bk-btn-primary">Save</button>
+    </div>
   </div>
 </div>
 
 <script>
-function applyFilters() {
-  const search = document.getElementById('searchTxn').value;
-  const category = document.getElementById('filterCategory').value;
-  const status = document.getElementById('filterStatus').value;
-  const params = new URLSearchParams();
-  if (search) params.set('search', search);
-  if (category) params.set('category', category);
-  if (status) params.set('status', status);
-  window.location.search = params.toString();
+let rcTxnId = null;
+
+{% if gaap_accounts is not defined %}
+// gaap_accounts not in template context — load from API
+let gaapAccountOptions = [];
+fetch('/api/v1/companies/{{ company.id if company else 0 }}/accounts')
+  .then(r => r.json())
+  .then(data => {
+    const sel = document.getElementById('rcAccountSel');
+    (Array.isArray(data) ? data : []).forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = (a.account_number ? a.account_number + ' ' : '') + a.name;
+      sel.appendChild(opt);
+    });
+  });
+{% endif %}
+
+function openReclassify(txnId, currentCat) {
+  rcTxnId = txnId;
+  document.getElementById('rcCurrentCat').textContent = currentCat || '(none)';
+  document.getElementById('rcAccountSel').value = '';
+  document.getElementById('rcCustomCat').value = '';
+  document.getElementById('reclassifyModal').classList.remove('hidden');
 }
-document.getElementById('searchTxn')?.addEventListener('keypress', e => {
-  if (e.key === 'Enter') applyFilters();
+
+function closeReclassify() {
+  document.getElementById('reclassifyModal').classList.add('hidden');
+  rcTxnId = null;
+}
+
+async function submitReclassify() {
+  const accountId = document.getElementById('rcAccountSel').value;
+  const custom = document.getElementById('rcCustomCat').value.trim();
+  if (!accountId && !custom) { alert('Select an account or enter a category.'); return; }
+
+  const payload = accountId
+    ? {account_id: parseInt(accountId), action: 'correct'}
+    : {category: custom};
+
+  let r;
+  if (accountId) {
+    r = await fetch(`/api/v1/transactions/${rcTxnId}/review`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'correct', account_id: parseInt(accountId)}),
+    });
+  } else {
+    r = await fetch(`/api/v1/transactions/${rcTxnId}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({category: custom}),
+    });
+  }
+
+  const data = await r.json();
+  if (data.success) {
+    closeReclassify();
+    location.reload();
+  } else {
+    alert('Error: ' + data.error);
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('reclassifyModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeReclassify();
 });
+
+lucide.createIcons();
+
+// ── Natural Language Query ────────────────────────────────────────────────
+async function runNLQ() {
+  const input = document.getElementById('nlqInput');
+  const btn = document.getElementById('nlqBtn');
+  const result = document.getElementById('nlqResult');
+  const query = input.value.trim();
+  if (!query) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="animate-spin">⟳</span>';
+  result.classList.add('hidden');
+
+  try {
+    const r = await fetch('/api/v1/nlq', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query}),
+    });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error);
+
+    const txns = data.transactions || [];
+    const total = data.total || 0;
+    const amount = data.total_amount || 0;
+    const sign = amount >= 0 ? '+' : '';
+
+    // Show result summary
+    result.classList.remove('hidden');
+    result.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="font-semibold">${total} results</span> for "<em>${query}</em>"
+          — net <span class="font-semibold">${sign}$${Math.abs(amount).toLocaleString('en-US',{minimumFractionDigits:2})}</span>
+        </div>
+        <button onclick="clearNLQ()" class="text-purple-600 hover:underline text-xs">Clear</button>
+      </div>`;
+
+    // Rewrite table body
+    const tbody = document.querySelector('#txnTable tbody') || document.querySelector('table tbody');
+    if (!tbody) return;
+
+    if (txns.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400 py-12">No results found</td></tr>';
+    } else {
+      tbody.innerHTML = txns.map(t => {
+        const amt = parseFloat(t.amount || 0);
+        const amtClass = amt >= 0 ? 'text-green-600' : 'text-red-600';
+        const amtFmt = (amt >= 0 ? '+' : '') + '$' + Math.abs(amt).toLocaleString('en-US',{minimumFractionDigits:2});
+        const date = t.transaction_date ? new Date(t.transaction_date + 'T00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+        const cat = t.category || t.suggested_category || '—';
+        const status = t.review_status === 'approved'
+          ? '<span class="bk-badge bk-badge-success">Approved</span>'
+          : t.categorization_status === 'suggested'
+          ? '<span class="bk-badge bk-badge-warning">Review</span>'
+          : '<span class="bk-badge">Pending</span>';
+        return `<tr class="hover:bg-gray-50">
+          <td class="text-sm text-gray-700 whitespace-nowrap">${date}</td>
+          <td class="font-medium max-w-xs truncate" title="${t.description || ''}">${t.description || '—'}</td>
+          <td class="text-gray-600 text-sm">${t.vendor_name || t.customer_name || '—'}</td>
+          <td class="text-right tabular-nums font-medium whitespace-nowrap ${amtClass}">${amtFmt}</td>
+          <td class="text-sm text-gray-600 max-w-[200px] truncate" title="${cat}">${cat}</td>
+          <td>${status}</td>
+          <td class="text-right">
+            <a href="/dashboard/transactions/${t.id}" class="text-blue-600 hover:underline text-xs">View</a>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+  } catch (e) {
+    result.classList.remove('hidden');
+    result.innerHTML = '<span class="text-red-600">Error: ' + e.message + '</span>';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i data-lucide="search" class="h-4 w-4"></i> Search';
+  lucide.createIcons();
+}
+
+function clearNLQ() {
+  document.getElementById('nlqInput').value = '';
+  document.getElementById('nlqResult').classList.add('hidden');
+  location.reload();
+}
 </script>
 {% endblock %}

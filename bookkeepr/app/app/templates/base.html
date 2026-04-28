@@ -18,6 +18,9 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <style>
         body {
@@ -25,6 +28,9 @@
         }
     </style>
     
+    <!-- CSRF token for AJAX calls -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     {% block head %}{% endblock %}
 </head>
 <body class="bg-gray-50 text-gray-900">
@@ -54,6 +60,16 @@
                                 <a href="{{ url_for('dashboard.transactions') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Transactions</a>
                                 <a href="{{ url_for('imports.upload_csv') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Import CSV</a>
                                 <a href="{{ url_for('review.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Review Queue</a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <a href="{{ url_for('dashboard.vendors') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                  <i data-lucide="building-2" class="h-3.5 w-3.5 inline mr-1 text-purple-500"></i> Vendor Intelligence
+                                </a>
+                                <a href="{{ url_for('dashboard.anomalies') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                  <i data-lucide="scan-search" class="h-3.5 w-3.5 inline mr-1 text-red-500"></i> Anomaly Detection
+                                </a>
+                                <a href="{{ url_for('dashboard.knowledge') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                  <i data-lucide="brain" class="h-3.5 w-3.5 inline mr-1 text-blue-500"></i> Knowledge Base
+                                </a>
                                 <div class="border-t border-gray-100 my-1"></div>
                                 <a href="{{ url_for('clients.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Clients</a>
                             </div>
@@ -151,7 +167,7 @@
                     <h4 class="font-semibold mb-4">Product</h4>
                     <ul class="space-y-2 text-gray-400">
                         <li><a href="#" class="hover:text-white">Features</a></li>
-                        <li><a href="{{ url_for('main.pricing') }}" class="hover:text-white">Pricing</a></li>
+                        <li><a href="{{ url_for('pricing.index') }}" class="hover:text-white">Pricing</a></li>
                         <li><a href="#" class="hover:text-white">Integrations</a></li>
                     </ul>
                 </div>
@@ -178,6 +194,18 @@
         </div>
     </footer>
     
+    <!-- CSRF header for all AJAX fetch() calls -->
+    <script>
+      const _csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      const _origFetch = window.fetch;
+      window.fetch = function(url, opts = {}) {
+        if (!opts.method || opts.method.toUpperCase() === 'GET') return _origFetch(url, opts);
+        opts.headers = opts.headers || {};
+        if (_csrfToken && !opts.headers['X-CSRFToken']) opts.headers['X-CSRFToken'] = _csrfToken;
+        return _origFetch(url, opts);
+      };
+    </script>
+
     <!-- Dropdown handler -->
     <script>
       document.querySelectorAll('[data-dropdown]').forEach(dd => {

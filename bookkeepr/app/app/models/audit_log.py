@@ -1,6 +1,9 @@
 """Audit Log Model - Track every action for compliance"""
+import logging
 from datetime import datetime
 from extensions import db
+
+_logger = logging.getLogger(__name__)
 
 
 class AuditLog(db.Model):
@@ -58,9 +61,8 @@ class AuditLog(db.Model):
             db.session.flush()
             return entry
         except Exception as e:
-            # Don't break the main action if audit fails
             db.session.rollback()
-            print(f"Audit log error: {e}")
+            _logger.error(f"Audit log error (action={action}, table={target_table}): {e}")
             return None
     
     def to_dict(self):

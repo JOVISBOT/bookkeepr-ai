@@ -13,6 +13,7 @@
 
         <div class="bg-white rounded-lg shadow p-6">
             <form method="POST" action="{{ url_for('clients.new') }}" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Client / Business Name *</label>
                     <input type="text" name="name" required maxlength="255"

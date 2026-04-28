@@ -11,6 +11,7 @@ from extensions import db
 from app.models import Transaction, Company, AuditLog
 from app.services.csv_parsers import parse_csv, extract_row
 from app.services.qbo_parser import parse_qbo
+from app.services.local_classifier import classify as local_classify
 
 bp = Blueprint('imports', __name__, url_prefix='/imports')
 
@@ -30,6 +31,28 @@ def get_target_company():
     return Company.query.filter_by(user_id=current_user.id, is_active=True).first()
 
 
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def _safe_filename(name: str) -> str:
+    """Strip path traversal characters from filename."""
+    import re
+    return re.sub(r'[^a-zA-Z0-9._\-]', '_', os.path.basename(name or ''))
+
+
+def _scan_csv_injection(raw_bytes: bytes) -> bool:
+    """Return True if the file contains formula-injection characters in the first cell of any row."""
+    try:
+        text = raw_bytes.decode('utf-8', errors='replace')
+        for line in text.splitlines():
+            first_cell = line.split(',')[0].strip().strip('"')
+            if first_cell and first_cell[0] in ('=', '+', '-', '@', '\t', '\r'):
+                return True
+    except Exception:
+        pass
+    return False
+
+
 @bp.route('/csv', methods=['GET', 'POST'])
 @login_required
 def upload_csv():
@@ -38,18 +61,31 @@ def upload_csv():
         if not file:
             flash('Please choose a file', 'error')
             return redirect(url_for('imports.upload_csv'))
-        
-        filename = (file.filename or '').lower()
+
+        filename = _safe_filename(file.filename or '').lower()
         if not (filename.endswith('.csv') or filename.endswith('.qbo') or filename.endswith('.ofx')):
             flash('Please upload a .csv, .qbo, or .ofx file', 'error')
             return redirect(url_for('imports.upload_csv'))
-        
+
         company = get_target_company()
         if not company:
             flash('Add a client first', 'warning')
             return redirect(url_for('clients.new'))
-        
-        raw = file.read()
+
+        # Read with size cap — prevents memory exhaustion from huge uploads
+        raw = file.read(_MAX_UPLOAD_BYTES + 1)
+        if len(raw) > _MAX_UPLOAD_BYTES:
+            flash('File is too large. Maximum size is 10 MB.', 'error')
+            return redirect(url_for('imports.upload_csv'))
+
+        # Warn on formula injection (CSV injection / Excel macro attack)
+        if filename.endswith('.csv') and _scan_csv_injection(raw):
+            from flask import current_app
+            current_app.logger.warning(
+                f'CSV injection pattern detected in upload by user {current_user.id}'
+            )
+            flash('File contains potentially unsafe content and was rejected.', 'error')
+            return redirect(url_for('imports.upload_csv'))
         
         # Parse based on file type
         rows_canonical = []
@@ -139,6 +175,7 @@ def commit_csv():
     imported = 0
     skipped = 0
     errors = []
+    auto_categorized = 0
     
     for r in data['rows']:
         try:
@@ -173,6 +210,24 @@ def commit_csv():
                 categorization_status='uncategorized',
                 categorized_by='import',
             )
+            
+            # Auto-categorize using local classifier
+            result = local_classify(desc, vendor or '', float(amount), company.id)
+            label = result['category']
+            confidence = result['confidence']
+            txn.suggested_category = label
+            txn.suggested_confidence = confidence
+            if confidence >= 80:
+                txn.category = label
+                txn.categorization_status = 'categorized'
+                auto_categorized += 1
+            else:
+                txn.categorization_status = 'suggested'
+            txn.raw_data = {
+                'ai_explanation': result.get('explanation', label),
+                'classification_source': result.get('source', 'local'),
+            }
+            
             db.session.add(txn)
             imported += 1
         except Exception as e:
@@ -184,7 +239,7 @@ def commit_csv():
         target_id=company.id,
         user=current_user,
         tenant_id=current_user.tenant_id,
-        new_value={'imported': imported, 'skipped': skipped, 'errors': len(errors), 'source': data.get('source_format', 'csv')},
+        new_value={'imported': imported, 'auto_categorized': auto_categorized, 'skipped': skipped, 'errors': len(errors), 'source': data.get('source_format', 'csv')},
         request=request,
     )
     db.session.commit()
@@ -195,7 +250,7 @@ def commit_csv():
         pass
     session.pop('csv_import_id', None)
     
-    flash(f'Imported {imported} transactions ({skipped} skipped, {len(errors)} errors)', 'success')
+    flash(f'Imported {imported} transactions ({auto_categorized} auto-categorized, {skipped} skipped, {len(errors)} errors)', 'success')
     return redirect(url_for('dashboard.transactions'))
 
 

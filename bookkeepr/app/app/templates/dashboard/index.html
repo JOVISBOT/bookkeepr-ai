@@ -1,258 +1,391 @@
 {% extends "base.html" %}
-
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="bg-gray-50 min-h-screen">
-    <!-- Dashboard Header -->
-    <div class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-                    <p class="text-gray-600 mt-1">Welcome back, {{ current_user.first_name or 'User' }}</p>
-                </div>
-                <div class="flex space-x-3">
-                    <a href="{{ url_for('quickbooks.connect') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center">
-                        <i data-lucide="link" class="h-4 w-4 mr-2"></i>
-                        Connect QuickBooks
-                    </a>
-                    <a href="{{ url_for('review.index') }}" class="bg-amber-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-amber-700 transition-colors flex items-center">
-                        <i data-lucide="eye" class="h-4 w-4 mr-2"></i>
-                        Review Queue
-                    </a>
-                </div>
-            </div>
+
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p class="text-sm text-gray-500 mt-0.5">Welcome back, {{ current_user.first_name or 'User' }}</p>
         </div>
+        <div class="flex flex-wrap gap-2">
+          {% if company and company.is_connected %}
+            <span class="inline-flex items-center gap-1.5 text-sm text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
+              <i data-lucide="check-circle" class="h-4 w-4"></i> QuickBooks Connected
+            </span>
+          {% else %}
+            <a href="{{ url_for('quickbooks.connect') }}" class="bk-btn-secondary text-sm">
+              <i data-lucide="link" class="h-4 w-4"></i> Connect QuickBooks
+            </a>
+          {% endif %}
+          <a href="{{ url_for('review.index') }}" class="bk-btn-primary text-sm">
+            <i data-lucide="list-checks" class="h-4 w-4"></i>
+            Review Queue
+            {% if stats.pending_count %}<span class="ml-1 bg-white/30 rounded-full px-1.5 text-xs">{{ stats.pending_count }}</span>{% endif %}
+          </a>
+        </div>
+      </div>
     </div>
-    
-    <!-- Dashboard Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <div class="flex items-center">
-                    <div class="p-3 bg-blue-100 rounded-lg">
-                        <i data-lucide="receipt" class="h-6 w-6 text-blue-600"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Total Transactions</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ stats.total_transactions or 0 }}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <div class="flex items-center">
-                    <div class="p-3 bg-amber-100 rounded-lg">
-                        <i data-lucide="clock" class="h-6 w-6 text-amber-600"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Pending Review</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ stats.pending_count or 0 }}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <div class="flex items-center">
-                    <div class="p-3 bg-blue-100 rounded-lg">
-                        <i data-lucide="check-circle" class="h-6 w-6 text-blue-600"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">AI Auto-Categorized</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ stats.auto_categorization_rate or 0 }}%</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <div class="flex items-center">
-                    <div class="p-3 bg-purple-100 rounded-lg">
-                        <i data-lucide="link" class="h-6 w-6 text-purple-600"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">QBO Status</p>
-                        <p class="text-lg font-bold {% if company and company.is_connected %}text-blue-600{% else %}text-gray-900{% endif %}">
-                            {{ 'Connected' if company and company.is_connected else 'Not Connected' }}
-                        </p>
-                    </div>
-                </div>
-            </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+      <div class="bk-card flex items-center gap-4">
+        <div class="p-2.5 bg-blue-100 rounded-lg shrink-0">
+          <i data-lucide="receipt" class="h-5 w-5 text-blue-600"></i>
         </div>
-        
-        <!-- Premium Features Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <!-- Anomaly Alerts -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Anomaly Alerts</h3>
-                    <a href="/api/v1/ai/anomalies" class="text-sm text-blue-600 hover:text-blue-700">View All →</a>
-                </div>
-                <div id="anomaly-alerts" class="space-y-3">
-                    <p class="text-gray-500 text-sm">Loading anomalies...</p>
-                </div>
-            </div>
-            
-            <!-- Cash Flow Forecast -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Cash Flow Forecast</h3>
-                    <a href="/api/v1/ai/cashflow-forecast" class="text-sm text-blue-600 hover:text-blue-700">Details →</a>
-                </div>
-                <div id="cashflow-forecast" class="space-y-3">
-                    <p class="text-gray-500 text-sm">Loading forecast...</p>
-                </div>
-            </div>
-            
-            <!-- Subscription Status -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Your Plan</h3>
-                    <a href="{{ url_for('pricing.index') }}" class="text-sm text-blue-600 hover:text-blue-700">Manage →</a>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-sm text-gray-600">Current Plan</span>
-                    <span class="font-semibold text-gray-900">{{ subscription.plan.display_name if subscription else 'Starter' }}</span>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-sm text-gray-600">Transactions Used</span>
-                    <span class="font-semibold text-gray-900">{{ subscription.transactions_used_this_period if subscription else 0 }} / {{ subscription.plan.max_transactions if subscription and subscription.plan else 1000 }}</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
-                    <div id="usage-bar-mini" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
-                </div>
-                <p class="text-xs text-gray-500">Resets in {{ subscription.days_until_renewal if subscription else 30 }} days</p>
-            </div>
+        <div class="min-w-0">
+          <p class="text-xs text-gray-500 truncate">Total Transactions</p>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.total_transactions or 0 }}</p>
+          <p class="text-xs text-gray-400">{{ stats.month_transactions or 0 }} this month</p>
         </div>
-        
-        <!-- Recent Transactions -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">Recent Transactions</h3>
-                <a href="{{ url_for('dashboard.transactions') }}" class="text-sm text-blue-600 hover:text-blue-700">View All →</a>
-            </div>
-            
-            {% if transactions %}
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
-                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Description</th>
-                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                            <th class="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">Amount</th>
-                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
-                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        {% for txn in transactions %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ txn.transaction_date.strftime('%Y-%m-%d') if txn.transaction_date else 'N/A' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{{ txn.description or 'No description' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ txn.vendor_name or 'N/A' }}</td>
-                            <td class="px-6 py-4 text-sm text-right font-mono {% if txn.amount < 0 %}text-red-600{% else %}text-blue-600{% endif %}">
-                                {{ "%.2f"|format(txn.amount|float) }}
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if txn.category %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                                    {{ txn.category or txn.suggested_category or 'Uncategorized' }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if txn.review_status == 'approved' %}bg-blue-100 text-blue-800{% elif txn.review_status == 'rejected' %}bg-red-100 text-red-800{% else %}bg-amber-100 text-amber-800{% endif %}">
-                                    {{ txn.review_status|title }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-center py-12">
-                <i data-lucide="inbox" class="h-12 w-12 text-gray-300 mx-auto mb-3"></i>
-                <p class="text-gray-500">No transactions yet. Connect QuickBooks to get started.</p>
-            </div>
-            {% endif %}
+      </div>
+
+      <div class="bk-card flex items-center gap-4">
+        <div class="p-2.5 bg-amber-100 rounded-lg shrink-0">
+          <i data-lucide="clock" class="h-5 w-5 text-amber-600"></i>
         </div>
+        <div class="min-w-0">
+          <p class="text-xs text-gray-500 truncate">Pending Review</p>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.pending_count or 0 }}</p>
+          <p class="text-xs text-gray-400">needs your attention</p>
+        </div>
+      </div>
+
+      <div class="bk-card flex items-center gap-4">
+        <div class="p-2.5 bg-green-100 rounded-lg shrink-0">
+          <i data-lucide="sparkles" class="h-5 w-5 text-green-600"></i>
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs text-gray-500 truncate">AI Categorized</p>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.auto_categorization_rate or 0 }}%</p>
+          <p class="text-xs text-gray-400">{{ stats.auto_categorized_count or 0 }} transactions</p>
+        </div>
+      </div>
+
+      <div class="bk-card flex items-center gap-4">
+        <div class="p-2.5 bg-purple-100 rounded-lg shrink-0">
+          <i data-lucide="alert-circle" class="h-5 w-5 text-purple-600"></i>
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs text-gray-500 truncate">Uncategorized</p>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.uncategorized_count or 0 }}</p>
+          <p class="text-xs text-gray-400">
+            <a href="{{ url_for('dashboard.transactions') }}?category=uncategorized" class="text-purple-600 hover:underline">view all</a>
+          </p>
+        </div>
+      </div>
+
     </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Monthly Income vs Expenses -->
+      <div class="bk-card">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-semibold text-gray-900">Income vs Expenses</h3>
+          <span class="text-xs text-gray-400">Last 6 months</span>
+        </div>
+        {% if monthly_labels %}
+        <div class="relative h-56">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+        {% else %}
+        <div class="h-56 flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="bar-chart-2" class="h-10 w-10 mb-2 opacity-30"></i>
+          <p class="text-sm">No transaction data yet</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Spending by Category (Donut) -->
+      <div class="bk-card">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-semibold text-gray-900">Spending by Category</h3>
+          <span class="text-xs text-gray-400">All time</span>
+        </div>
+        {% if category_labels %}
+        <div class="flex items-center gap-4">
+          <div class="relative h-48 w-48 shrink-0">
+            <canvas id="categoryChart"></canvas>
+          </div>
+          <div class="min-w-0 space-y-1.5 flex-1" id="categoryLegend"></div>
+        </div>
+        {% else %}
+        <div class="h-56 flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="pie-chart" class="h-10 w-10 mb-2 opacity-30"></i>
+          <p class="text-sm">No categorized transactions yet</p>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- Second Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Anomaly Alerts -->
+      <div class="bk-card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-semibold text-gray-900">Anomaly Alerts</h3>
+          <i data-lucide="shield-alert" class="h-4 w-4 text-gray-400"></i>
+        </div>
+        <div id="anomaly-alerts">
+          <p class="text-sm text-gray-400">Checking for anomalies…</p>
+        </div>
+      </div>
+
+      <!-- Cash Flow Forecast -->
+      <div class="bk-card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-semibold text-gray-900">Cash Flow Forecast</h3>
+          <i data-lucide="trending-up" class="h-4 w-4 text-gray-400"></i>
+        </div>
+        <div id="cashflow-forecast">
+          <p class="text-sm text-gray-400">Loading forecast…</p>
+        </div>
+      </div>
+
+      <!-- Subscription -->
+      <div class="bk-card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-semibold text-gray-900">Your Plan</h3>
+          <a href="{{ url_for('pricing.index') }}" class="text-xs text-blue-600 hover:underline">Manage</a>
+        </div>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-500">Plan</span>
+            <span class="font-medium">{{ subscription.plan.display_name if subscription and subscription.plan else 'Starter' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Transactions</span>
+            <span class="font-medium">
+              {{ subscription.transactions_used_this_period if subscription else 0 }}
+              / {{ subscription.plan.max_transactions if subscription and subscription.plan else 1000 }}
+            </span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+            <div id="usage-bar" class="bg-blue-500 h-1.5 rounded-full transition-all" style="width:0%"></div>
+          </div>
+          <p class="text-xs text-gray-400">Resets in {{ subscription.days_until_renewal if subscription else 30 }} days</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="bk-card p-0 overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-base font-semibold text-gray-900">Recent Transactions</h3>
+        <a href="{{ url_for('dashboard.transactions') }}" class="text-sm text-blue-600 hover:underline">View all →</a>
+      </div>
+
+      {% if transactions %}
+      <div class="overflow-x-auto">
+        <table class="bk-table">
+          <thead>
+            <tr>
+              <th class="whitespace-nowrap">Date</th>
+              <th>Description</th>
+              <th class="hidden sm:table-cell">Vendor</th>
+              <th class="text-right whitespace-nowrap">Amount</th>
+              <th class="hidden md:table-cell">Category</th>
+              <th class="hidden md:table-cell">Status</th>
+              <th class="text-right"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for txn in transactions %}
+            <tr class="hover:bg-gray-50">
+              <td class="whitespace-nowrap text-sm text-gray-600">
+                {{ txn.transaction_date.strftime('%b %d') if txn.transaction_date else '—' }}
+              </td>
+              <td class="max-w-[180px]">
+                <p class="truncate font-medium text-sm" title="{{ txn.description }}">{{ txn.description or '—' }}</p>
+              </td>
+              <td class="hidden sm:table-cell text-sm text-gray-500 max-w-[120px]">
+                <p class="truncate" title="{{ txn.vendor_name }}">{{ txn.vendor_name or '—' }}</p>
+              </td>
+              <td class="text-right tabular-nums font-medium text-sm whitespace-nowrap
+                {{ 'text-green-600' if txn.amount > 0 else 'text-red-600' }}">
+                {% if txn.amount > 0 %}+{% endif %}${{ "%.2f"|format(txn.amount|abs|float) }}
+              </td>
+              <td class="hidden md:table-cell text-sm max-w-[150px]">
+                <p class="truncate text-gray-600" title="{{ txn.category }}">
+                  {{ txn.category or txn.suggested_category or '—' }}
+                </p>
+              </td>
+              <td class="hidden md:table-cell">
+                {% if txn.review_status == 'approved' %}
+                  <span class="bk-badge bk-badge-success">Approved</span>
+                {% elif txn.review_status == 'flagged' %}
+                  <span class="bk-badge bk-badge-error">Flagged</span>
+                {% else %}
+                  <span class="bk-badge bk-badge-warning">Pending</span>
+                {% endif %}
+              </td>
+              <td class="text-right">
+                <a href="{{ url_for('dashboard.transaction_detail', transaction_id=txn.id) }}"
+                   class="text-xs text-blue-600 hover:underline whitespace-nowrap">Edit</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-12">
+        <i data-lucide="inbox" class="h-12 w-12 text-gray-200 mx-auto mb-3"></i>
+        <p class="text-gray-500 text-sm mb-4">No transactions yet</p>
+        <div class="flex justify-center gap-2">
+          <a href="/imports/csv" class="bk-btn-primary text-sm">Import CSV</a>
+          <a href="{{ url_for('quickbooks.connect') }}" class="bk-btn-secondary text-sm">Connect QuickBooks</a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /container -->
 </div>
-{% endblock %}
 
 {% block scripts %}
 <script>
-// Load usage bar
-fetch('/billing/usage')
-    .then(r => r.json())
-    .then(data => {
-        if (data.percentage !== undefined) {
-            const bar = document.getElementById('usage-bar-mini');
-            bar.style.width = Math.min(data.percentage, 100) + '%';
-            if (data.percentage >= 90) bar.classList.add('bg-red-500');
-            else if (data.percentage >= 75) bar.classList.add('bg-amber-500');
-        }
-    })
-    .catch(() => {});
+// ── Chart palette ──────────────────────────────────────────────
+const PALETTE = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'];
 
-// Load anomaly alerts
-fetch('/api/v1/ai/anomalies')
-    .then(r => r.json())
-    .then(data => {
-        const container = document.getElementById('anomaly-alerts');
-        if (data.success && data.total_anomalies > 0) {
-            const high = data.high_severity || 0;
-            const html = `
-                <div class="p-3 ${high > 0 ? 'bg-red-50 border border-red-200 rounded-lg' : 'bg-amber-50 border border-amber-200 rounded-lg'}">
-                    <div class="flex items-center">
-                        <i data-lucide="${high > 0 ? 'alert-triangle' : 'alert-circle'}" class="h-5 w-5 ${high > 0 ? 'text-red-500' : 'text-amber-500'} mr-2"></i>
-                        <span class="font-medium ${high > 0 ? 'text-red-800' : 'text-amber-800'}">${data.total_anomalies} anomalies detected</span>
-                    </div>
-                    ${high > 0 ? `<p class="text-sm text-red-600 mt-1">${high} high severity requires attention</p>` : ''}
-                </div>
-            `;
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = `
-                <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center">
-                    <i data-lucide="check-circle" class="h-5 w-5 text-blue-500 mr-2"></i>
-                    <span class="text-sm text-blue-800">No anomalies detected</span>
-                </div>
-            `;
-        }
-        lucide.createIcons();
-    })
-    .catch(() => {
-        document.getElementById('anomaly-alerts').innerHTML = '<p class="text-gray-500 text-sm">Unable to load anomalies</p>';
-    });
+// ── Monthly Income vs Expenses Bar Chart ──────────────────────
+{% if monthly_labels %}
+(function(){
+  const labels = {{ monthly_labels | tojson }};
+  const income   = {{ monthly_income | tojson }};
+  const expenses = {{ monthly_expenses | tojson }};
 
-// Load cashflow forecast
-fetch('/api/v1/ai/cashflow-forecast?months=3')
-    .then(r => r.json())
-    .then(data => {
-        const container = document.getElementById('cashflow-forecast');
-        if (data.success && data.forecast) {
-            let html = '';
-            data.forecast.forEach(f => {
-                const isPositive = f.predicted_net >= 0;
-                html += `
-                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                        <span class="text-sm text-gray-600">${f.month}</span>
-                        <span class="text-sm font-medium ${isPositive ? 'text-blue-600' : 'text-red-600'}">
-                            ${isPositive ? '+' : ''}$${Math.abs(f.predicted_net).toFixed(2)}
-                        </span>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = '<p class="text-gray-500 text-sm">' + (data.message || 'No forecast data available') + '</p>';
-        }
-    })
-    .catch(() => {
-        document.getElementById('cashflow-forecast').innerHTML = '<p class="text-gray-500 text-sm">Unable to load forecast</p>';
-    });
+  new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Income',   data: income,   backgroundColor: '#10b981', borderRadius: 4 },
+        { label: 'Expenses', data: expenses, backgroundColor: '#ef4444', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: '#f3f4f6' }, ticks: {
+          font: { size: 11 },
+          callback: v => '$' + v.toLocaleString()
+        }}
+      }
+    }
+  });
+})();
+{% endif %}
+
+// ── Category Donut Chart ───────────────────────────────────────
+{% if category_labels %}
+(function(){
+  const labels = {{ category_labels | tojson }};
+  const spend  = {{ category_spend | tojson }};
+
+  // Shorten long GAAP labels for the chart
+  const short = labels.map(l => {
+    const m = l.match(/^\d+\s+(.+)$/);
+    return m ? (m[1].length > 18 ? m[1].slice(0,16)+'…' : m[1]) : (l.length > 20 ? l.slice(0,18)+'…' : l);
+  });
+
+  new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+      labels: short,
+      datasets: [{ data: spend, backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ' $' + ctx.parsed.toLocaleString(undefined,{minimumFractionDigits:2}) }
+      }}
+    }
+  });
+
+  // Custom legend
+  const legend = document.getElementById('categoryLegend');
+  labels.forEach((lbl, i) => {
+    const short2 = lbl.replace(/^\d+\s+/, '');
+    legend.innerHTML += `
+      <div class="flex items-center gap-2 text-xs text-gray-600 min-w-0">
+        <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${PALETTE[i%PALETTE.length]}"></span>
+        <span class="truncate" title="${short2}">${short2}</span>
+        <span class="ml-auto font-medium text-gray-800 shrink-0 tabular-nums">$${spend[i].toLocaleString(undefined,{minimumFractionDigits:0})}</span>
+      </div>`;
+  });
+})();
+{% endif %}
+
+// ── Usage bar ─────────────────────────────────────────────────
+fetch('/api/v1/billing/subscription').then(r=>r.json()).then(d=>{
+  const sub = d.subscription || d;
+  const used = sub.transactions_used || sub.transactions_used_this_period || 0;
+  const max = sub.max_transactions || 1000;
+  const pct = max ? Math.min((used / max) * 100, 100) : 0;
+  const b = document.getElementById('usage-bar');
+  b.style.width = pct + '%';
+  if(pct>=90) b.style.background = '#ef4444';
+  else if(pct>=75) b.style.background = '#f59e0b';
+}).catch(()=>{});
+
+// ── Anomaly Alerts ────────────────────────────────────────────
+fetch('/api/v1/ai/anomalies').then(r=>r.json()).then(d=>{
+  const el = document.getElementById('anomaly-alerts');
+  if(d.success && d.total_anomalies > 0){
+    const hi = d.high_severity || 0;
+    const bg = hi > 0 ? '#fef2f2' : '#fffbeb';
+    const border = hi > 0 ? '#fecaca' : '#fde68a';
+    const title = hi > 0 ? '#991b1b' : '#92400e';
+    const sub = hi > 0 ? '#dc2626' : '#d97706';
+    el.innerHTML = `<div class="p-3 rounded-lg text-sm" style="background:${bg};border:1px solid ${border}">
+      <p class="font-medium" style="color:${title}">${d.total_anomalies} anomalie${d.total_anomalies>1?'s':''} detected</p>
+      ${hi>0?`<p class="mt-0.5" style="color:${sub}">${hi} high-severity need attention</p>`:''}
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="p-3 rounded-lg text-sm flex items-center gap-2" style="background:#f0fdf4;border:1px solid #bbf7d0">
+      <i data-lucide="check-circle" class="h-4 w-4 shrink-0" style="color:#16a34a"></i>
+      <span style="color:#166534">No anomalies detected</span>
+    </div>`;
+  }
+  lucide.createIcons();
+}).catch(()=>{ document.getElementById('anomaly-alerts').innerHTML='<p class="text-sm text-gray-400">Unavailable</p>'; });
+
+// ── Cash Flow Forecast ────────────────────────────────────────
+fetch('/api/v1/ai/cashflow-forecast?months=3').then(r=>r.json()).then(d=>{
+  const el = document.getElementById('cashflow-forecast');
+  if(d.success && d.forecast && d.forecast.length){
+    el.innerHTML = d.forecast.map(f=>{
+      const pos = f.predicted_net >= 0;
+      return `<div class="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0 text-sm">
+        <span class="text-gray-600">${f.month}</span>
+        <span class="font-medium ${pos?'text-green-600':'text-red-600'} tabular-nums">
+          ${pos?'+':'-'}$${Math.abs(f.predicted_net).toLocaleString(undefined,{minimumFractionDigits:2})}
+        </span>
+      </div>`;
+    }).join('');
+  } else {
+    el.innerHTML = `<p class="text-sm text-gray-400">${d.message||'Not enough data for forecast'}</p>`;
+  }
+}).catch(()=>{ document.getElementById('cashflow-forecast').innerHTML='<p class="text-sm text-gray-400">Unavailable</p>'; });
+
+lucide.createIcons();
 </script>
+{% endblock %}
 {% endblock %}

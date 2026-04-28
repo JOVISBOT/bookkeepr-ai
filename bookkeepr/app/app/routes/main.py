@@ -23,7 +23,3 @@ def about():
     return render_template('about.html')
 
 
-@bp.route('/pricing')
-def pricing():
-    """Pricing page"""
-    return render_template('pricing.html')

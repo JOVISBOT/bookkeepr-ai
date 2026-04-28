@@ -86,6 +86,24 @@ def api_ledger():
 # DOWNLOAD ENDPOINTS
 # ============================================================================
 
+@bp.route('/api/v1/reports/ar-aging')
+@login_required
+def api_ar_aging():
+    """Accounts Receivable Aging Report"""
+    as_of = request.args.get('as_of')
+    data = generate_ar_aging(as_of)
+    return jsonify(data)
+
+
+@bp.route('/api/v1/reports/tax-summary')
+@login_required
+def api_tax_summary():
+    """Tax-ready income and expense summary by category"""
+    year = request.args.get('year', type=int)
+    data = generate_tax_summary(year)
+    return jsonify(data)
+
+
 @bp.route('/api/v1/reports/download/<report_type>')
 @login_required
 def download_report(report_type):
@@ -112,6 +130,14 @@ def download_report(report_type):
     elif report_type == 'ledger':
         data = generate_ledger_data(start_date, end_date)
         filename = f'general_ledger_{datetime.now().strftime("%Y%m%d")}'
+    elif report_type == 'ar-aging':
+        as_of = request.args.get('as_of')
+        data = generate_ar_aging(as_of)
+        filename = f'ar_aging_{datetime.now().strftime("%Y%m%d")}'
+    elif report_type == 'tax-summary':
+        year = request.args.get('year', type=int)
+        data = generate_tax_summary(year)
+        filename = f'tax_summary_{datetime.now().strftime("%Y%m%d")}'
     else:
         return jsonify({'error': 'Invalid report type'}), 400
     
@@ -537,6 +563,158 @@ def generate_ledger_data(start_date_str=None, end_date_str=None, category=None,
         'pages': transactions.pages,
         'current_page': page,
         'per_page': per_page
+    }
+
+
+def generate_ar_aging(as_of_str=None):
+    """Generate Accounts Receivable Aging report"""
+    company = get_company()
+    if not company:
+        return {
+            'report_type': 'A/R Aging',
+            'as_of': 'No company found',
+            'generated_at': datetime.now().isoformat(),
+            'summary': {'total_receivable': 0, 'current': 0, 'days_30': 0, 'days_60': 0, 'days_90_plus': 0},
+            'customers': []
+        }
+
+    if as_of_str:
+        as_of = datetime.strptime(as_of_str, '%Y-%m-%d').date()
+    else:
+        as_of = datetime.now().date()
+
+    # Get income transactions (positive = receivable) grouped by customer
+    transactions = Transaction.query.filter(
+        Transaction.company_id == company.id,
+        Transaction.amount > 0,
+        Transaction.transaction_date <= as_of,
+        Transaction.review_status != 'approved'
+    ).all()
+
+    from collections import defaultdict
+    customers = defaultdict(lambda: {'current': 0, 'days_30': 0, 'days_60': 0, 'days_90_plus': 0, 'total': 0})
+
+    for t in transactions:
+        name = t.customer_name or t.vendor_name or 'Unknown Customer'
+        amount = float(t.amount)
+        age = (as_of - t.transaction_date).days if t.transaction_date else 0
+
+        customers[name]['total'] += amount
+        if age <= 30:
+            customers[name]['current'] += amount
+        elif age <= 60:
+            customers[name]['days_30'] += amount
+        elif age <= 90:
+            customers[name]['days_60'] += amount
+        else:
+            customers[name]['days_90_plus'] += amount
+
+    customer_list = [
+        {
+            'customer': name,
+            'current': round(data['current'], 2),
+            'days_1_30': round(data['days_30'], 2),
+            'days_31_60': round(data['days_60'], 2),
+            'days_over_90': round(data['days_90_plus'], 2),
+            'total': round(data['total'], 2),
+        }
+        for name, data in sorted(customers.items(), key=lambda x: -x[1]['total'])
+    ]
+
+    totals = {
+        'current': round(sum(c['current'] for c in customer_list), 2),
+        'days_1_30': round(sum(c['days_1_30'] for c in customer_list), 2),
+        'days_31_60': round(sum(c['days_31_60'] for c in customer_list), 2),
+        'days_over_90': round(sum(c['days_over_90'] for c in customer_list), 2),
+        'total_receivable': round(sum(c['total'] for c in customer_list), 2),
+    }
+
+    return {
+        'report_type': 'A/R Aging',
+        'as_of': as_of.isoformat(),
+        'generated_at': datetime.now().isoformat(),
+        'summary': totals,
+        'customers': customer_list,
+    }
+
+
+def generate_tax_summary(year=None):
+    """Generate tax-ready income/expense summary by category"""
+    company = get_company()
+    now = datetime.now()
+
+    if not year:
+        year = now.year
+
+    start = datetime(year, 1, 1).date()
+    end = datetime(year, 12, 31).date()
+
+    if not company:
+        return {
+            'report_type': 'Tax Summary',
+            'year': year,
+            'generated_at': now.isoformat(),
+            'income': [],
+            'expenses': [],
+            'summary': {'total_income': 0, 'total_expenses': 0, 'net_income': 0},
+        }
+
+    transactions = Transaction.query.filter(
+        Transaction.company_id == company.id,
+        Transaction.transaction_date >= start,
+        Transaction.transaction_date <= end
+    ).all()
+
+    from collections import defaultdict
+    income_by_cat = defaultdict(float)
+    expense_by_cat = defaultdict(float)
+    total_income = 0.0
+    total_expenses = 0.0
+
+    for t in transactions:
+        amount = float(t.amount) if t.amount else 0
+        cat = t.category or 'Uncategorized'
+        if amount >= 0:
+            income_by_cat[cat] += amount
+            total_income += amount
+        else:
+            expense_by_cat[cat] += abs(amount)
+            total_expenses += abs(amount)
+
+    income_rows = [
+        {'category': cat, 'amount': round(amt, 2), 'deductible': False}
+        for cat, amt in sorted(income_by_cat.items(), key=lambda x: -x[1])
+    ]
+    deductible_categories = {
+        'Advertising & Marketing', 'Bank Fees', 'Insurance', 'Meals & Entertainment',
+        'Office Supplies', 'Payroll', 'Professional Services', 'Rent & Lease',
+        'Software & Subscriptions', 'Taxes', 'Travel', 'Utilities',
+        'Cost of Goods Sold', 'Equipment', 'Vehicle Expenses',
+    }
+    expense_rows = [
+        {
+            'category': cat,
+            'amount': round(amt, 2),
+            'deductible': cat in deductible_categories,
+        }
+        for cat, amt in sorted(expense_by_cat.items(), key=lambda x: -x[1])
+    ]
+
+    deductible_total = sum(r['amount'] for r in expense_rows if r['deductible'])
+
+    return {
+        'report_type': 'Tax Summary',
+        'year': year,
+        'period': f'{start.isoformat()} to {end.isoformat()}',
+        'generated_at': now.isoformat(),
+        'income': income_rows,
+        'expenses': expense_rows,
+        'summary': {
+            'total_income': round(total_income, 2),
+            'total_expenses': round(total_expenses, 2),
+            'net_income': round(total_income - total_expenses, 2),
+            'total_deductible': round(deductible_total, 2),
+        },
     }
 
 

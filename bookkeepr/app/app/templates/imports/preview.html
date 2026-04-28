@@ -81,6 +81,7 @@
       <div class="flex gap-2">
         <a href="{{ url_for('imports.cancel_csv') }}" class="bk-btn-secondary">Cancel</a>
         <form method="POST" action="{{ url_for('imports.commit_csv') }}" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="bk-btn-primary">
             <i data-lucide="check" class="h-4 w-4"></i>
             Import All {{ total_rows }} Rows

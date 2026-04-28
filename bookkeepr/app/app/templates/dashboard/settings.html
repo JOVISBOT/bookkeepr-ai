@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block title %}Settings{% endblock %}
 
 {% block content %}
@@ -12,151 +11,324 @@
     </div>
   </div>
 
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-      <!-- User Profile -->
-      <div class="bk-card">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-3 rounded-lg" style="background: var(--bk-primary-light); color: var(--bk-primary);">
-            <i data-lucide="user" class="h-5 w-5"></i>
-          </div>
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">User Profile</h3>
-            <p class="text-sm text-gray-500">Update your personal information</p>
-          </div>
+    <!-- User Profile -->
+    <div class="bk-card">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="p-3 rounded-lg" style="background:var(--bk-primary-light);color:var(--bk-primary)">
+          <i data-lucide="user" class="h-5 w-5"></i>
         </div>
-        <form class="space-y-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value="{{ current_user.email }}" class="bk-input w-full" />
-          </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">User Profile</h3>
+          <p class="text-sm text-gray-500">Update your personal information</p>
+        </div>
+      </div>
+      <form id="profileForm" class="space-y-3" onsubmit="saveProfile(event)">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-            <input type="text" value="{{ current_user.first_name or '' }}" class="bk-input w-full" />
+            <input id="pFirstName" type="text" value="{{ current_user.first_name or '' }}" class="bk-input w-full">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-            <input type="text" value="{{ current_user.last_name or '' }}" class="bk-input w-full" />
+            <input id="pLastName" type="text" value="{{ current_user.last_name or '' }}" class="bk-input w-full">
           </div>
-          <button type="submit" class="bk-btn-primary mt-3">Save Changes</button>
-        </form>
-      </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input id="pEmail" type="email" value="{{ current_user.email }}" class="bk-input w-full" required>
+        </div>
+        <div id="profileMsg" class="hidden text-sm font-medium py-1"></div>
+        <button type="submit" class="bk-btn-primary">Save Profile</button>
+      </form>
+    </div>
 
-      <!-- QuickBooks Integration -->
-      <div class="bk-card">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-3 rounded-lg" style="background: #dcfce7; color: #16a34a;">
-            <i data-lucide="link" class="h-5 w-5"></i>
-          </div>
+    <!-- Security -->
+    <div class="bk-card">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="p-3 rounded-lg" style="background:#fee2e2;color:#ef4444">
+          <i data-lucide="shield" class="h-5 w-5"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Security</h3>
+          <p class="text-sm text-gray-500">Password and two-factor authentication</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 border border-gray-200 rounded-lg flex items-center justify-between">
           <div>
-            <h3 class="text-lg font-semibold text-gray-900">QuickBooks Integration</h3>
-            <p class="text-sm text-gray-500">Connect your QuickBooks Online account</p>
+            <p class="font-medium text-gray-900">Password</p>
+            <p class="text-sm text-gray-500">Update your login password</p>
           </div>
+          <button onclick="openPasswordModal()" class="bk-btn-secondary text-sm">Change</button>
         </div>
-        <div class="mb-4">
-          <span class="bk-badge bk-badge-warning">Not Connected</span>
+        <div class="p-4 border border-gray-200 rounded-lg flex items-center justify-between">
+          <div>
+            <p class="font-medium text-gray-900">Two-Factor Auth</p>
+            <p class="text-sm text-gray-500">{% if current_user.mfa_enabled %}Enabled{% else %}Not configured{% endif %}</p>
+          </div>
+          {% if current_user.mfa_enabled %}
+            <span class="bk-badge bk-badge-success">Active</span>
+          {% else %}
+            <a href="/mfa/setup" class="bk-btn-primary text-sm">Enable MFA</a>
+          {% endif %}
         </div>
+      </div>
+    </div>
+
+    <!-- AI Settings -->
+    <div class="bk-card">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="p-3 rounded-lg" style="background:#ede9fe;color:#7c3aed">
+          <i data-lucide="sparkles" class="h-5 w-5"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">AI Categorization</h3>
+          <p class="text-sm text-gray-500">Configure auto-categorization behavior</p>
+        </div>
+      </div>
+      <form id="aiForm" class="space-y-4" onsubmit="saveAI(event)">
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="text-sm font-medium text-gray-700">Auto-categorization</label>
+            <p class="text-xs text-gray-500 mt-0.5">Automatically assign categories to new transactions</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="aiAutocat" class="sr-only peer" checked>
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-medium text-gray-700">Confidence Threshold</label>
+            <span id="thresholdVal" class="text-sm font-bold text-blue-600">80%</span>
+          </div>
+          <input type="range" id="aiThreshold" min="50" max="95" value="80" step="5"
+                 class="w-full accent-blue-600"
+                 oninput="document.getElementById('thresholdVal').textContent = this.value + '%'">
+          <div class="flex justify-between text-xs text-gray-400 mt-1">
+            <span>50% (more auto)</span>
+            <span>95% (more review)</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-1.5">Transactions above this score are auto-approved. Below it go to Review Queue.</p>
+        </div>
+        <div id="aiMsg" class="hidden text-sm font-medium py-1"></div>
+        <button type="submit" class="bk-btn-primary">Save AI Settings</button>
+      </form>
+    </div>
+
+    <!-- Notifications -->
+    <div class="bk-card">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="p-3 rounded-lg" style="background:#fef3c7;color:#d97706">
+          <i data-lucide="bell" class="h-5 w-5"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
+          <p class="text-sm text-gray-500">Email notification preferences</p>
+        </div>
+      </div>
+      <form id="notifForm" class="space-y-3" onsubmit="saveNotifications(event)">
+        <label class="flex items-center justify-between py-2 border-b border-gray-100">
+          <div>
+            <p class="text-sm font-medium text-gray-700">Daily summary</p>
+            <p class="text-xs text-gray-500">Recap of today's transactions and categorizations</p>
+          </div>
+          <input type="checkbox" id="nDaily" class="h-4 w-4 text-blue-600 rounded" checked>
+        </label>
+        <label class="flex items-center justify-between py-2 border-b border-gray-100">
+          <div>
+            <p class="text-sm font-medium text-gray-700">Uncategorized alert</p>
+            <p class="text-xs text-gray-500">Alert when new uncategorized transactions arrive</p>
+          </div>
+          <input type="checkbox" id="nUncategorized" class="h-4 w-4 text-blue-600 rounded" checked>
+        </label>
+        <label class="flex items-center justify-between py-2 border-b border-gray-100">
+          <div>
+            <p class="text-sm font-medium text-gray-700">Monthly reports</p>
+            <p class="text-xs text-gray-500">P&L and balance sheet delivered monthly</p>
+          </div>
+          <input type="checkbox" id="nMonthly" class="h-4 w-4 text-blue-600 rounded">
+        </label>
+        <label class="flex items-center justify-between py-2">
+          <div>
+            <p class="text-sm font-medium text-gray-700">Anomaly detection alerts</p>
+            <p class="text-xs text-gray-500">Notify when unusual transactions are detected</p>
+          </div>
+          <input type="checkbox" id="nAnomalies" class="h-4 w-4 text-blue-600 rounded">
+        </label>
+        <div id="notifMsg" class="hidden text-sm font-medium py-1"></div>
+        <button type="submit" class="bk-btn-primary mt-2">Save Preferences</button>
+      </form>
+    </div>
+
+    <!-- QuickBooks -->
+    <div class="bk-card">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="p-3 rounded-lg" style="background:#dcfce7;color:#16a34a">
+          <i data-lucide="link" class="h-5 w-5"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">QuickBooks Integration</h3>
+          <p class="text-sm text-gray-500">Connect your QuickBooks Online account to sync transactions</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="bk-badge bk-badge-warning">Not Connected</span>
         <a href="/quickbooks/connect" class="bk-btn-primary">
-          <i data-lucide="link" class="h-4 w-4"></i>
-          Connect QuickBooks
+          <i data-lucide="link" class="h-4 w-4"></i> Connect QuickBooks
         </a>
       </div>
+    </div>
 
-      <!-- AI Settings -->
-      <div class="bk-card">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-3 rounded-lg" style="background: #ede9fe; color: #7c3aed;">
-            <i data-lucide="sparkles" class="h-5 w-5"></i>
-          </div>
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">AI Settings</h3>
-            <p class="text-sm text-gray-500">Configure AI bookkeeping preferences</p>
-          </div>
-        </div>
-        <form class="space-y-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Auto-categorization</label>
-            <select class="bk-input w-full">
-              <option>Enabled</option>
-              <option>Disabled</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Confidence Threshold</label>
-            <input type="range" min="50" max="95" value="80" class="w-full" />
-            <p class="text-xs text-gray-500 mt-1">Items above this score are auto-approved</p>
-          </div>
-          <button type="submit" class="bk-btn-primary mt-3">Save AI Settings</button>
-        </form>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="pwModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+        <input id="pwCurrent" type="password" class="bk-input w-full" placeholder="Enter current password">
       </div>
-
-      <!-- Notifications -->
-      <div class="bk-card">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-3 rounded-lg" style="background: #fef3c7; color: #d97706;">
-            <i data-lucide="bell" class="h-5 w-5"></i>
-          </div>
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
-            <p class="text-sm text-gray-500">Email notification preferences</p>
-          </div>
-        </div>
-        <form class="space-y-3">
-          <label class="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked class="rounded" /> Daily summary
-          </label>
-          <label class="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked class="rounded" /> Uncategorized transactions alert
-          </label>
-          <label class="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" class="rounded" /> Monthly reports
-          </label>
-          <label class="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" class="rounded" /> Anomaly detection alerts
-          </label>
-          <button type="submit" class="bk-btn-primary mt-3">Save Preferences</button>
-        </form>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+        <input id="pwNew" type="password" class="bk-input w-full" placeholder="At least 8 characters">
       </div>
-
-      <!-- Security (NEW) -->
-      <div class="bk-card lg:col-span-2">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-3 rounded-lg" style="background: #fee2e2; color: #ef4444;">
-            <i data-lucide="shield" class="h-5 w-5"></i>
-          </div>
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">Security</h3>
-            <p class="text-sm text-gray-500">Two-factor auth and session management</p>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="p-4 border border-gray-200 rounded-lg">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium text-gray-900">Two-Factor Authentication</p>
-                <p class="text-sm text-gray-500">{% if current_user.mfa_enabled %}Enabled{% else %}Not configured{% endif %}</p>
-              </div>
-              {% if current_user.mfa_enabled %}
-                <span class="bk-badge bk-badge-success">Active</span>
-              {% else %}
-                <a href="/mfa/setup" class="bk-btn-primary text-sm">Enable MFA</a>
-              {% endif %}
-            </div>
-          </div>
-          <div class="p-4 border border-gray-200 rounded-lg">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium text-gray-900">Change Password</p>
-                <p class="text-sm text-gray-500">Last changed: never</p>
-              </div>
-              <a href="#" class="bk-btn-secondary text-sm">Change</a>
-            </div>
-          </div>
-        </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+        <input id="pwConfirm" type="password" class="bk-input w-full" placeholder="Repeat new password">
       </div>
-
+      <div id="pwMsg" class="hidden text-sm font-medium py-1"></div>
+    </div>
+    <div class="flex gap-2 justify-end mt-5">
+      <button onclick="closePwModal()" class="bk-btn-secondary">Cancel</button>
+      <button onclick="submitPassword()" class="bk-btn-primary">Update Password</button>
     </div>
   </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Load saved preferences on page load ──────────────────────────
+fetch('/api/v1/user/preferences').then(r => r.json()).then(d => {
+  if (!d.success) return;
+  const p = d.preferences;
+  document.getElementById('aiAutocat').checked    = p.auto_categorization;
+  document.getElementById('aiThreshold').value    = p.confidence_threshold;
+  document.getElementById('thresholdVal').textContent = p.confidence_threshold + '%';
+  document.getElementById('nDaily').checked        = p.notify_daily_summary;
+  document.getElementById('nUncategorized').checked = p.notify_uncategorized;
+  document.getElementById('nMonthly').checked     = p.notify_monthly_reports;
+  document.getElementById('nAnomalies').checked   = p.notify_anomalies;
+}).catch(() => {});
+
+// ── Profile ───────────────────────────────────────────────────────
+async function saveProfile(e) {
+  e.preventDefault();
+  const msg = document.getElementById('profileMsg');
+  const r = await fetch('/api/v1/user/profile', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      email:      document.getElementById('pEmail').value.trim(),
+      first_name: document.getElementById('pFirstName').value.trim(),
+      last_name:  document.getElementById('pLastName').value.trim(),
+    }),
+  });
+  const data = await r.json();
+  showMsg(msg, data.success ? 'Profile saved successfully.' : 'Error: ' + data.error, data.success);
+}
+
+// ── AI Settings ───────────────────────────────────────────────────
+async function saveAI(e) {
+  e.preventDefault();
+  const msg = document.getElementById('aiMsg');
+  const r = await fetch('/api/v1/user/preferences', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      auto_categorization:  document.getElementById('aiAutocat').checked,
+      confidence_threshold: parseInt(document.getElementById('aiThreshold').value),
+    }),
+  });
+  const data = await r.json();
+  showMsg(msg, data.success ? 'AI settings saved.' : 'Error: ' + data.error, data.success);
+}
+
+// ── Notifications ─────────────────────────────────────────────────
+async function saveNotifications(e) {
+  e.preventDefault();
+  const msg = document.getElementById('notifMsg');
+  const r = await fetch('/api/v1/user/preferences', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      notify_daily_summary:    document.getElementById('nDaily').checked,
+      notify_uncategorized:    document.getElementById('nUncategorized').checked,
+      notify_monthly_reports:  document.getElementById('nMonthly').checked,
+      notify_anomalies:        document.getElementById('nAnomalies').checked,
+    }),
+  });
+  const data = await r.json();
+  showMsg(msg, data.success ? 'Notification preferences saved.' : 'Error: ' + data.error, data.success);
+}
+
+// ── Password modal ────────────────────────────────────────────────
+function openPasswordModal() {
+  document.getElementById('pwCurrent').value = '';
+  document.getElementById('pwNew').value = '';
+  document.getElementById('pwConfirm').value = '';
+  document.getElementById('pwMsg').classList.add('hidden');
+  document.getElementById('pwModal').classList.remove('hidden');
+}
+function closePwModal() {
+  document.getElementById('pwModal').classList.add('hidden');
+}
+
+async function submitPassword() {
+  const msg = document.getElementById('pwMsg');
+  const current = document.getElementById('pwCurrent').value;
+  const newPw   = document.getElementById('pwNew').value;
+  const confirm = document.getElementById('pwConfirm').value;
+  if (newPw !== confirm) {
+    showMsg(msg, 'New passwords do not match.', false);
+    return;
+  }
+  if (newPw.length < 8) {
+    showMsg(msg, 'Password must be at least 8 characters.', false);
+    return;
+  }
+  const r = await fetch('/api/v1/user/password', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({current_password: current, new_password: newPw}),
+  });
+  const data = await r.json();
+  if (data.success) {
+    showMsg(msg, 'Password updated successfully.', true);
+    setTimeout(closePwModal, 1500);
+  } else {
+    showMsg(msg, 'Error: ' + data.error, false);
+  }
+}
+
+document.getElementById('pwModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closePwModal();
+});
+
+// ── Helper ────────────────────────────────────────────────────────
+function showMsg(el, text, success) {
+  el.textContent = text;
+  el.className = 'text-sm font-medium py-1 ' + (success ? 'text-green-600' : 'text-red-600');
+  el.classList.remove('hidden');
+}
+
+lucide.createIcons();
+</script>
 {% endblock %}

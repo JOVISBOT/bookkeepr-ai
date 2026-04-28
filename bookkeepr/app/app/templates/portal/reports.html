@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}My Reports{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <h1 class="text-2xl font-bold text-gray-900 mb-2">Financial Reports</h1>
+  <p class="text-gray-500 mb-8">Download your reports as PDF. Reports are generated from your categorized transactions.</p>
+
+  <div class="grid gap-4">
+    <div class="bg-white rounded-xl border border-gray-200 p-6 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="bg-blue-100 rounded-lg p-3">
+          <i data-lucide="trending-up" class="h-6 w-6 text-blue-600"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900">Profit & Loss Report</h3>
+          <p class="text-sm text-gray-500">Income vs expenses for last month</p>
+        </div>
+      </div>
+      <a href="{{ url_for('portal.download_report', report_type='pl') }}"
+        class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+        <i data-lucide="download" class="h-4 w-4"></i> Download PDF
+      </a>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 p-6 flex items-center justify-between opacity-60">
+      <div class="flex items-center gap-4">
+        <div class="bg-gray-100 rounded-lg p-3">
+          <i data-lucide="scale" class="h-6 w-6 text-gray-500"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700">Balance Sheet</h3>
+          <p class="text-sm text-gray-400">Assets, liabilities, and equity</p>
+        </div>
+      </div>
+      <span class="text-xs bg-gray-100 text-gray-500 px-3 py-1.5 rounded-lg font-medium">Coming Soon</span>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 p-6 flex items-center justify-between opacity-60">
+      <div class="flex items-center gap-4">
+        <div class="bg-gray-100 rounded-lg p-3">
+          <i data-lucide="activity" class="h-6 w-6 text-gray-500"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-700">Cash Flow Statement</h3>
+          <p class="text-sm text-gray-400">Operating, investing, and financing activities</p>
+        </div>
+      </div>
+      <span class="text-xs bg-gray-100 text-gray-500 px-3 py-1.5 rounded-lg font-medium">Coming Soon</span>
+    </div>
+  </div>
+</div>
+<script>lucide.createIcons();</script>
+{% endblock %}

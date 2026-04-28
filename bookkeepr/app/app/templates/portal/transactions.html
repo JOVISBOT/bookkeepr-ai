@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}My Transactions{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <h1 class="text-2xl font-bold text-gray-900">Transactions</h1>
+    <a href="{{ url_for('portal.upload_statement') }}" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 text-sm">
+      <i data-lucide="upload" class="h-4 w-4"></i> Upload Statement
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-wrap gap-3">
+    <input name="q" value="{{ search }}" placeholder="Search transactions…"
+      class="flex-1 min-w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <select name="status" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="">All statuses</option>
+      <option value="categorized" {% if status_filter == 'categorized' %}selected{% endif %}>Categorized</option>
+      <option value="uncategorized" {% if status_filter == 'uncategorized' %}selected{% endif %}>Uncategorized</option>
+      <option value="needs_review" {% if status_filter == 'needs_review' %}selected{% endif %}>Needs Review</option>
+    </select>
+    <button type="submit" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700">Filter</button>
+    {% if search or status_filter %}
+    <a href="{{ url_for('portal.transactions') }}" class="text-gray-500 px-3 py-2 text-sm hover:text-gray-700">Clear</a>
+    {% endif %}
+  </form>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+        <tr>
+          <th class="px-6 py-3 text-left">Date</th>
+          <th class="px-6 py-3 text-left">Description</th>
+          <th class="px-6 py-3 text-left">Category</th>
+          <th class="px-6 py-3 text-right">Amount</th>
+          <th class="px-6 py-3 text-center">Status</th>
+          <th class="px-6 py-3 text-center">Flag</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for txn in transactions %}
+        <tr class="hover:bg-gray-50" id="txn-{{ txn.id }}">
+          <td class="px-6 py-3 text-gray-500 whitespace-nowrap">
+            {{ txn.transaction_date.strftime('%b %d, %Y') if txn.transaction_date else '—' }}
+          </td>
+          <td class="px-6 py-3 text-gray-900 font-medium max-w-xs truncate">
+            {{ txn.description or '—' }}
+          </td>
+          <td class="px-6 py-3 text-gray-500">
+            {% if txn.category %}
+              <span class="font-medium text-gray-700">{{ txn.category }}</span>
+            {% elif txn.suggested_category %}
+              <span class="text-amber-600">{{ txn.suggested_category }}</span>
+              <span class="text-xs text-gray-400 ml-1">suggested</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="px-6 py-3 text-right font-semibold {% if txn.amount and txn.amount > 0 %}text-green-600{% else %}text-red-500{% endif %}">
+            {% if txn.amount %}
+              {% if txn.amount > 0 %}+{% endif %}${{ '{:,.2f}'.format(txn.amount | abs) }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="px-6 py-3 text-center">
+            {% if txn.review_status == 'flagged' %}
+              <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Flagged</span>
+            {% elif txn.categorization_status == 'categorized' %}
+              <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Done</span>
+            {% else %}
+              <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Pending</span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-3 text-center">
+            {% if txn.review_status != 'flagged' %}
+            <button onclick="flagTxn({{ txn.id }})"
+              class="text-gray-400 hover:text-red-500 transition-colors"
+              title="Flag for bookkeeper review">
+              <i data-lucide="flag" class="h-4 w-4"></i>
+            </button>
+            {% else %}
+            <i data-lucide="flag" class="h-4 w-4 text-red-400 mx-auto"></i>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+            <i data-lucide="inbox" class="h-8 w-8 mx-auto mb-2"></i>
+            <p>No transactions found.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination and pagination.pages > 1 %}
+  <div class="mt-4 flex justify-center gap-2">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('portal.transactions', page=pagination.prev_num, q=search, status=status_filter) }}"
+      class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">← Prev</a>
+    {% endif %}
+    <span class="px-3 py-1 text-sm text-gray-500">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+    <a href="{{ url_for('portal.transactions', page=pagination.next_num, q=search, status=status_filter) }}"
+      class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<script>
+lucide.createIcons();
+function flagTxn(id) {
+  const note = prompt('Optional note for your bookkeeper:') ?? '';
+  fetch(`/portal/transactions/${id}/flag`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({note})
+  }).then(r => r.json()).then(d => {
+    if (d.success) location.reload();
+    else alert('Error: ' + d.error);
+  });
+}
+</script>
+{% endblock %}

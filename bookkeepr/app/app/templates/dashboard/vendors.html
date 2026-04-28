@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Vendor Intelligence{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Vendor Intelligence</h1>
+        <p class="text-gray-600 mt-1">Spend patterns and trends by vendor — last 12 months</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    {% if not company or not vendor_data %}
+    <div class="bk-card text-center py-16">
+      <i data-lucide="users" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-700">No vendor data yet</h3>
+      <p class="text-gray-500 mt-1">Sync transactions from QuickBooks to see vendor intelligence.</p>
+    </div>
+    {% else %}
+
+    <!-- Top Vendors Chart -->
+    {% if monthly_vendors %}
+    <div class="bk-card mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Monthly Spend — Top 5 Vendors</h3>
+      <canvas id="vendorChart" height="100"></canvas>
+    </div>
+    {% endif %}
+
+    <!-- Search + filter -->
+    <div class="bk-card py-3 flex items-center gap-3 mb-4">
+      <input type="text" id="vendorSearch" placeholder="Search vendors…"
+             oninput="filterVendors(this.value)"
+             class="bk-input flex-1 max-w-xs">
+      <span class="text-sm text-gray-500">{{ vendor_data | length }} vendors in last 12 months</span>
+    </div>
+
+    <!-- Table -->
+    <div class="bk-card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="bk-table" id="vendorTable">
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th class="text-right">Total Spend</th>
+              <th class="text-right">Transactions</th>
+              <th class="text-right">Avg per Transaction</th>
+              <th>First Transaction</th>
+              <th>Last Transaction</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in vendor_data %}
+            {% set total = v.total_spend | float %}
+            {% set avg = v.avg_amount | float %}
+            <tr data-vendor="{{ v.vendor_name | lower }}">
+              <td class="font-medium text-gray-900">{{ v.vendor_name }}</td>
+              <td class="text-right tabular-nums font-semibold text-red-600">
+                ${{ "%.2f" | format(total) }}
+              </td>
+              <td class="text-right tabular-nums text-gray-700">{{ v.txn_count }}</td>
+              <td class="text-right tabular-nums text-gray-600">${{ "%.2f" | format(avg) }}</td>
+              <td class="text-sm text-gray-500">{{ v.first_txn or '—' }}</td>
+              <td class="text-sm text-gray-500">{{ v.last_txn or '—' }}</td>
+              <td class="text-right">
+                <a href="/dashboard/transactions?search={{ v.vendor_name | urlencode }}"
+                   class="text-blue-600 hover:underline text-xs">View All</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterVendors(val) {
+  const q = val.toLowerCase();
+  document.querySelectorAll('#vendorTable tbody tr').forEach(row => {
+    row.style.display = row.dataset.vendor.includes(q) ? '' : 'none';
+  });
+}
+
+{% if monthly_vendors %}
+// Build Chart.js dataset from server data
+const raw = {{ monthly_vendors | tojson }};
+
+// Collect all months and vendors
+const months = [...new Set(raw.map(r => r.month))].sort();
+const vendors = [...new Set(raw.map(r => r.vendor_name))];
+
+const palette = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444'];
+const datasets = vendors.slice(0, 5).map((v, i) => ({
+  label: v,
+  data: months.map(m => {
+    const hit = raw.find(r => r.vendor_name === v && r.month === m);
+    return hit ? parseFloat(hit.spend) : 0;
+  }),
+  borderColor: palette[i % palette.length],
+  backgroundColor: palette[i % palette.length] + '22',
+  tension: 0.3,
+  fill: false,
+}));
+
+new Chart(document.getElementById('vendorChart'), {
+  type: 'line',
+  data: { labels: months, datasets },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom' } },
+    scales: {
+      y: {
+        ticks: { callback: v => '$' + v.toLocaleString() },
+        beginAtZero: true,
+      }
+    }
+  }
+});
+{% endif %}
+
+lucide.createIcons();
+</script>
+{% endblock %}

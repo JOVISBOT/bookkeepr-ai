@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Anomaly Detection{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Anomaly Detection</h1>
+          <p class="text-gray-600 mt-1">AI-powered alerts for unusual financial activity</p>
+        </div>
+        <button onclick="runScan()" id="scanBtn" class="bk-btn-primary">
+          <i data-lucide="scan-search" class="h-4 w-4"></i> Run Scan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    {% if not company %}
+    <div class="bk-card text-center py-16">
+      <i data-lucide="link-2-off" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-700">No company connected</h3>
+      <p class="text-gray-500 mt-1">Connect QuickBooks to enable anomaly detection.</p>
+      <a href="{{ url_for('quickbooks.connect') }}" class="bk-btn-primary mt-4 inline-flex">Connect QuickBooks</a>
+    </div>
+    {% else %}
+
+    <!-- Stats (populated by JS) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="statsRow">
+      <div class="bk-card text-center py-5">
+        <div class="text-3xl font-bold text-gray-900" id="statTotal">—</div>
+        <div class="text-xs text-gray-500 mt-1">Total Anomalies</div>
+      </div>
+      <div class="bk-card text-center py-5">
+        <div class="text-3xl font-bold text-red-600" id="statHigh">—</div>
+        <div class="text-xs text-gray-500 mt-1">High Severity</div>
+      </div>
+      <div class="bk-card text-center py-5">
+        <div class="text-3xl font-bold text-amber-500" id="statMed">—</div>
+        <div class="text-xs text-gray-500 mt-1">Medium Severity</div>
+      </div>
+      <div class="bk-card text-center py-5">
+        <div class="text-3xl font-bold text-blue-500" id="statLow">—</div>
+        <div class="text-xs text-gray-500 mt-1">Low Severity</div>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="bk-card py-3 flex flex-wrap items-center gap-3 mb-4">
+      <span class="text-sm font-medium text-gray-700">Filter:</span>
+      <button class="filter-btn bk-btn-primary text-sm" data-filter="all" onclick="applyFilter('all', this)">All</button>
+      <button class="filter-btn bk-btn-secondary text-sm" data-filter="high" onclick="applyFilter('high', this)">High</button>
+      <button class="filter-btn bk-btn-secondary text-sm" data-filter="medium" onclick="applyFilter('medium', this)">Medium</button>
+      <button class="filter-btn bk-btn-secondary text-sm" data-filter="low" onclick="applyFilter('low', this)">Low</button>
+      <button class="filter-btn bk-btn-secondary text-sm" data-filter="potential_duplicate" onclick="applyFilter('potential_duplicate', this)">Duplicates</button>
+      <button class="filter-btn bk-btn-secondary text-sm" data-filter="amount_outlier" onclick="applyFilter('amount_outlier', this)">Amount Outliers</button>
+      <div class="ml-auto text-sm text-gray-400" id="scanTime"></div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loadingState" class="bk-card text-center py-16">
+      <div class="inline-block w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p class="text-gray-500">Running anomaly scan…</p>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsArea" class="hidden space-y-3"></div>
+
+    <!-- Empty state -->
+    <div id="emptyState" class="hidden bk-card text-center py-16">
+      <i data-lucide="shield-check" class="h-12 w-12 text-green-400 mx-auto mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-700">No anomalies found</h3>
+      <p class="text-gray-500 mt-1">Your transactions look clean for the scanned period.</p>
+    </div>
+
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if company %}
+const COMPANY_ID = {{ company.id }};
+let allAnomalies = [];
+let dismissed = new Set(JSON.parse(localStorage.getItem('bk_dismissed_anomalies') || '[]'));
+let currentFilter = 'all';
+
+function severityColor(s) {
+  return s === 'high' ? '#ef4444' : s === 'medium' ? '#f59e0b' : '#3b82f6';
+}
+function severityBg(s) {
+  return s === 'high' ? '#fee2e2' : s === 'medium' ? '#fef3c7' : '#dbeafe';
+}
+function typeIcon(t) {
+  const icons = {
+    potential_duplicate: 'copy', amount_outlier: 'trending-up',
+    frequency_spike: 'activity', unusual_hour: 'moon'
+  };
+  return icons[t] || 'alert-circle';
+}
+function typeLabel(t) {
+  return {
+    potential_duplicate: 'Duplicate', amount_outlier: 'Unusual Amount',
+    frequency_spike: 'Frequency Spike', unusual_hour: 'Unusual Hour'
+  }[t] || t;
+}
+
+function dismissAnomaly(key) {
+  dismissed.add(key);
+  localStorage.setItem('bk_dismissed_anomalies', JSON.stringify([...dismissed]));
+  renderAnomalies();
+}
+
+function renderAnomalies() {
+  const area = document.getElementById('resultsArea');
+  const empty = document.getElementById('emptyState');
+  const visible = allAnomalies.filter(a => {
+    const key = anomalyKey(a);
+    if (dismissed.has(key)) return false;
+    if (currentFilter === 'all') return true;
+    if (currentFilter === a.severity) return true;
+    if (currentFilter === a.type) return true;
+    return false;
+  });
+
+  if (visible.length === 0) {
+    area.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  area.classList.remove('hidden');
+
+  area.innerHTML = visible.map(a => {
+    const key = anomalyKey(a);
+    const color = severityColor(a.severity);
+    const bg = severityBg(a.severity);
+    const icon = typeIcon(a.type);
+    const label = typeLabel(a.type);
+    const txnLink = a.transaction_id ? `<a href="/dashboard/transactions/${a.transaction_id}" class="text-blue-600 hover:underline text-xs ml-2">View →</a>` : '';
+    const dupeLinks = a.transaction_ids ? a.transaction_ids.map(id =>
+      `<a href="/dashboard/transactions/${id}" class="text-blue-600 hover:underline text-xs">#${id}</a>`
+    ).join(' ') : '';
+    return `
+    <div class="bk-card flex items-start gap-4 border-l-4" style="border-left-color:${color}" data-key="${key}">
+      <div class="p-2.5 rounded-lg shrink-0" style="background:${bg}">
+        <i data-lucide="${icon}" class="h-5 w-5" style="color:${color}"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full" style="background:${bg};color:${color}">${a.severity}</span>
+          <span class="text-xs text-gray-500">${label}</span>
+        </div>
+        <p class="text-sm font-medium text-gray-900">${a.description}</p>
+        ${a.vendor ? `<p class="text-xs text-gray-500 mt-0.5">Vendor: <span class="font-medium">${a.vendor}</span></p>` : ''}
+        ${a.category ? `<p class="text-xs text-gray-500">Category: ${a.category}</p>` : ''}
+        ${a.expected_range ? `<p class="text-xs text-gray-500">Typical range: $${a.expected_range[0]} – $${a.expected_range[1]}</p>` : ''}
+        ${a.transaction_ids ? `<p class="text-xs text-gray-500 mt-1">Transactions: ${dupeLinks}</p>` : ''}
+        ${txnLink}
+      </div>
+      <button onclick="dismissAnomaly('${key}')"
+              class="shrink-0 p-1.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
+              title="Dismiss">
+        <i data-lucide="x" class="h-4 w-4"></i>
+      </button>
+    </div>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+function anomalyKey(a) {
+  return `${a.type}_${a.transaction_id || ''}_${(a.description || '').slice(0, 40)}`;
+}
+
+function applyFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.className = 'filter-btn bk-btn-secondary text-sm';
+  });
+  btn.className = 'filter-btn bk-btn-primary text-sm';
+  renderAnomalies();
+}
+
+async function runScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="animate-spin mr-2">⟳</span> Scanning…';
+  document.getElementById('loadingState').classList.remove('hidden');
+  document.getElementById('resultsArea').classList.add('hidden');
+  document.getElementById('emptyState').classList.add('hidden');
+
+  try {
+    const r = await fetch('/api/v1/ai/anomalies');
+    const data = await r.json();
+    if (data.success) {
+      allAnomalies = data.anomalies || [];
+      document.getElementById('statTotal').textContent = data.total_anomalies || 0;
+      document.getElementById('statHigh').textContent = data.high_severity || 0;
+      document.getElementById('statMed').textContent = data.medium_severity || 0;
+      document.getElementById('statLow').textContent = data.low_severity || 0;
+      const d = new Date(data.scan_date);
+      document.getElementById('scanTime').textContent = 'Last scan: ' + d.toLocaleTimeString();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  document.getElementById('loadingState').classList.add('hidden');
+  renderAnomalies();
+  btn.disabled = false;
+  btn.innerHTML = '<i data-lucide="scan-search" class="h-4 w-4"></i> Run Scan';
+  lucide.createIcons();
+}
+
+// Auto-run on load
+runScan();
+{% endif %}
+lucide.createIcons();
+</script>
+{% endblock %}

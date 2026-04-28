@@ -27,10 +27,9 @@ import time
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-from openai import OpenAI, RateLimitError, APIError
 from flask import current_app
 
-from app import db
+from extensions import db
 from app.models.transaction import Transaction
 from app.models.account import Account
 from app.models.category_rule import CategoryRule
@@ -93,11 +92,12 @@ class AICategorizationService:
         Args:
             api_key: OpenAI API key (defaults to env var)
         """
-        self.api_key = api_key or current_app.config.get('OPENAI_API_KEY')
+        import os
+        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
         if not self.api_key:
-            raise ValueError("OpenAI API key required")
-        
-        self.client = OpenAI(api_key=self.api_key)
+            raise ValueError("ANTHROPIC_API_KEY required for AI categorization")
+        import anthropic
+        self.client = anthropic.Anthropic(api_key=self.api_key)
         self.request_times: List[datetime] = []
         self._executor = ThreadPoolExecutor(max_workers=5)
     
@@ -333,40 +333,28 @@ class AICategorizationService:
         # Build the prompt
         prompt = self._build_categorization_prompt(context)
         
-        # Call OpenAI API
+        # Call Anthropic Claude API
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4-0125-preview",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._get_system_prompt()
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=0.3,  # Lower for more consistent categorizations
+            system_prompt = self._get_system_prompt()
+            response = self.client.messages.create(
+                model="claude-haiku-4-5-20251001",
                 max_tokens=500,
-                response_format={"type": "json_object"}
+                system=system_prompt,
+                messages=[{"role": "user", "content": prompt}],
             )
-            
-            # Track request for rate limiting
+
             self._track_request()
-            
-            # Parse response
-            content = response.choices[0].message.content
-            result = json.loads(content)
-            
+
+            content = response.content[0].text
+            # Extract JSON from response
+            import re as _re
+            m = _re.search(r'\{.*\}', content, _re.DOTALL)
+            result = json.loads(m.group() if m else content)
+
             return self._parse_ai_response(result, context)
-            
-        except RateLimitError:
-            logger.warning("OpenAI rate limit hit, waiting...")
-            time.sleep(5)
-            raise  # Let caller retry
-        except APIError as e:
-            logger.error(f"OpenAI API error: {e}")
+
+        except Exception as e:
+            logger.error(f"Anthropic API error: {e}")
             raise
     
     def _get_system_prompt(self) -> str:
@@ -418,8 +406,7 @@ Consider:
             )
             if account.description:
                 prompt_parts.append(f"   Description: {account.description}")
-            if account.common_keywords:
-                prompt_parts.append(f"   Common Keywords: {', '.join(account.common_keywords)}")
+            # common_keywords not stored on Account model — skip
         
         # Add similar transactions for context
         if context.similar_transactions:
@@ -646,16 +633,8 @@ class LearningSystem:
     def _learn_from_correction(self, correction):
         """Update internal patterns based on correction"""
         
-        # Update account common_keywords
-        account = Account.query.get(correction.corrected_account_id)
-        if account:
-            keywords = account.common_keywords or []
-            
-            # Add payee as keyword for this account
-            if correction.payee_name and correction.payee_name not in keywords:
-                keywords.append(correction.payee_name)
-                account.common_keywords = keywords[:20]  # Keep top 20
-                db.session.commit()
+        # common_keywords not on Account model — learning handled via CategoryRule only
+        pass
     
     def _evaluate_rule_creation(self, correction, user_id: int):
         """Check if we should auto-create a rule from corrections"""

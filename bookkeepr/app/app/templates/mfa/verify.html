@@ -11,6 +11,7 @@
             <p class="text-xs text-gray-500 mb-4">Account: {{ email }}</p>
 
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="text" name="token" required maxlength="6" pattern="[0-9]{6}" autofocus
                        placeholder="000000"
                        autocomplete="one-time-code"

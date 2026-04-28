@@ -10,21 +10,44 @@ Werkzeug==3.0.1
 SQLAlchemy==2.0.23
 
 # AI/ML
+anthropic>=0.97.0
 scikit-learn==1.3.2
 numpy==1.26.2
 
-# Plaid (Bank Feeds)
-plaid-python==9.0.0
+# QuickBooks
+intuitlib>=1.3.0
+python-quickbooks>=0.9.4
+
+# MFA / Security
+pyotp>=2.9.0
+qrcode[pil]>=7.4.2
+Flask-WTF>=1.2.0
+Flask-Limiter>=3.5.0
+cryptography>=41.0.0
+
+# Fuzzy matching (vendor deduplication)
+rapidfuzz>=3.6.1
 
 # Reporting
 openpyxl==3.1.5
 reportlab==4.4.10
 
+# Scheduler (background QBO auto-sync)
+APScheduler>=3.10.0
+
+# Email
+sendgrid>=6.11.0
+
 # Utilities
 python-dotenv==1.0.0
 requests==2.31.0
 
-# Optional (for production)
-# gunicorn==21.2.0
-# psycopg2-binary==2.9.9
-# redis==5.0.1
+# Payments — uncomment when Stripe keys are configured
+# stripe>=7.0.0
+
+# Bank feeds — uncomment when Plaid keys are configured
+# plaid-python==9.0.0
+
+# Production
+gunicorn==21.2.0
+psycopg2-binary==2.9.9

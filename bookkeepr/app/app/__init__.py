@@ -13,7 +13,7 @@ def create_app(config_name='default'):
     
     # Initialize extensions
     init_extensions(app)
-    
+
     # Register blueprints FIRST (before catch-all route)
     from app.routes.main import bp as main_bp
     from app.routes.auth import bp as auth_bp
@@ -29,12 +29,12 @@ def create_app(config_name='default'):
     from app.routes.review import bp as review_bp
     from app.routes.admin import bp as admin_bp
     from app.routes.ai_enhanced import bp as ai_enhanced_bp
-    
     from app.routes.banks import bp as banks_bp
     from app.routes.clients import bp as clients_bp
     from app.routes.mfa import bp as mfa_bp
     from app.routes.imports import bp as imports_bp
-    
+    from app.routes.portal import bp as portal_bp
+
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
@@ -54,6 +54,12 @@ def create_app(config_name='default'):
     app.register_blueprint(clients_bp)
     app.register_blueprint(mfa_bp)
     app.register_blueprint(imports_bp)
+    app.register_blueprint(portal_bp)
+
+    # Exempt JSON/API blueprints from CSRF (they use session/token auth, not form tokens)
+    from extensions import csrf
+    for _bp in (api_bp, reconciliation_bp, ai_bp, ai_enhanced_bp, quickbooks_bp):
+        csrf.exempt(_bp)
     
     # Register catch-all route for React frontend (after all API routes)
     from flask import send_from_directory
@@ -85,6 +91,27 @@ def create_app(config_name='default'):
         # Otherwise serve index.html for client-side routing
         return send_from_directory(static_dir, 'index.html')
     
+    # Ensure all tables exist (safe — only creates missing tables)
+    with app.app_context():
+        db.create_all()
+
+    # Warn if QBO sandbox credentials are used in production
+    import os as _os
+    if _os.environ.get('FLASK_ENV') == 'production' and _os.environ.get('INTUIT_ENVIRONMENT', 'sandbox') == 'sandbox':
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            'WARNING: INTUIT_ENVIRONMENT=sandbox while FLASK_ENV=production. '
+            'Switch to production QBO credentials before going live.'
+        )
+
+    # Start background QBO auto-sync (every 30 min) — skipped in testing
+    if config_name != 'testing':
+        try:
+            from app.routes.quickbooks.scheduler import init_scheduler
+            init_scheduler(app)
+        except Exception:
+            pass  # APScheduler not installed or disabled — manual sync still works
+
     # Register error handlers
     register_error_handlers(app)
     
@@ -146,6 +173,9 @@ def register_error_handlers(app):
     
     @app.errorhandler(Exception)
     def catch_all_error(error):
+        from werkzeug.exceptions import HTTPException
+        if isinstance(error, HTTPException):
+            return error
         db.session.rollback()
         app.logger.error(f'Unhandled exception: {error}', exc_info=True)
         if request.is_json:

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block subject %}{{ app_name }}{% endblock %}</title>
+  <style>
+    body { margin:0; padding:0; background:#f4f7fb; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:#1e293b; }
+    .wrapper { max-width:600px; margin:32px auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .header { background:#1d4ed8; padding:28px 40px; text-align:center; }
+    .header-logo { color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.5px; text-decoration:none; }
+    .header-logo span { color:#93c5fd; }
+    .body { padding:40px; }
+    .body h1 { margin:0 0 16px; font-size:22px; font-weight:700; color:#1e293b; }
+    .body p { margin:0 0 16px; font-size:15px; line-height:1.7; color:#475569; }
+    .btn { display:inline-block; padding:13px 28px; background:#1d4ed8; color:#ffffff !important; text-decoration:none; border-radius:8px; font-size:15px; font-weight:600; margin:8px 0 24px; }
+    .btn:hover { background:#1e40af; }
+    .divider { border:none; border-top:1px solid #e2e8f0; margin:28px 0; }
+    .meta { font-size:13px; color:#94a3b8; }
+    .stat-row { display:flex; gap:16px; margin:24px 0; }
+    .stat { flex:1; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; text-align:center; }
+    .stat-value { font-size:22px; font-weight:700; color:#1d4ed8; }
+    .stat-label { font-size:12px; color:#64748b; margin-top:4px; text-transform:uppercase; letter-spacing:.5px; }
+    .category-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f1f5f9; font-size:14px; }
+    .category-row:last-child { border-bottom:none; }
+    .footer { background:#f8fafc; padding:24px 40px; text-align:center; border-top:1px solid #e2e8f0; }
+    .footer p { font-size:12px; color:#94a3b8; margin:4px 0; }
+    .footer a { color:#64748b; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <a class="header-logo" href="{{ app_url }}">BookKeepr<span> AI</span></a>
+    </div>
+    <div class="body">
+      {% block content %}{% endblock %}
+    </div>
+    <div class="footer">
+      <p>© 2026 {{ app_name }}. All rights reserved.</p>
+      <p><a href="{{ app_url }}">Visit Dashboard</a></p>
+    </div>
+  </div>
+</body>
+</html>

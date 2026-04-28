@@ -3,11 +3,21 @@ import os
 from datetime import timedelta
 
 
+def _require_env(name: str, fallback=None):
+    """Return env var value; raise in production if missing and no fallback."""
+    value = os.environ.get(name)
+    if not value:
+        if os.environ.get('FLASK_ENV') == 'production':
+            raise EnvironmentError(f"Required environment variable {name!r} is not set.")
+        return fallback() if callable(fallback) else fallback
+    return value
+
+
 class Config:
     """Base configuration"""
-    
+
     # Flask
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-super-secret-key-2026-bookkeepr-ai'
+    SECRET_KEY = _require_env('SECRET_KEY', fallback=lambda: os.urandom(32).hex())
     
     # Database - resolve to absolute path for instance/bookkeepr.db
     _BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -64,13 +74,28 @@ class Config:
         """Base URL for Intuit OAuth"""
         return 'https://sandbox-accounts.platform.intuit.com' if self.INTUIT_SANDBOX_MODE else 'https://accounts.platform.intuit.com'
     
+    # Token encryption (Fernet) — generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    FERNET_KEY = _require_env('FERNET_KEY')
+
     # Application
     APP_NAME = os.environ.get('APP_NAME', 'BookKeepr AI')
     APP_URL = os.environ.get('APP_URL', 'http://localhost:5000')
-    
-    # Redis/Celery
+
+    # Email (SendGrid)
+    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')  # optional — falls back to console log
+    MAIL_FROM = os.environ.get('MAIL_FROM', 'noreply@bookkeepr.ai')
+
+    # Stripe (optional — falls back to demo mode)
+    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+    STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+    STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+
+    # QuickBooks environment
+    INTUIT_ENVIRONMENT = os.environ.get('INTUIT_ENVIRONMENT', 'sandbox')
+
+    # Redis / rate limiter
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-    
+
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
@@ -85,6 +110,24 @@ class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
     SQLALCHEMY_ECHO = False
+
+    # Force https:// in url_for() — critical for password reset links in email
+    PREFERRED_URL_SCHEME = 'https'
+
+    # Secure cookies — requires HTTPS
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_SECURE = True
+    REMEMBER_COOKIE_HTTPONLY = True
+
+    # PostgreSQL-compatible engine options (drop SQLite-only check_same_thread)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_size': 5,
+        'max_overflow': 10,
+    }
 
 
 class TestingConfig(Config):

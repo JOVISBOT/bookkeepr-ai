@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Connect Your Bank{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+      <i data-lucide="building-2" class="h-8 w-8 text-blue-600"></i>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900">Connect Your Bank</h1>
+    <p class="text-gray-500 mt-2">Securely link your bank account so we can automatically import your transactions.</p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 p-8">
+    <ul class="space-y-3 mb-8 text-sm text-gray-600">
+      <li class="flex items-center gap-3">
+        <i data-lucide="shield-check" class="h-5 w-5 text-green-500 flex-shrink-0"></i>
+        Bank-level 256-bit encryption
+      </li>
+      <li class="flex items-center gap-3">
+        <i data-lucide="eye-off" class="h-5 w-5 text-green-500 flex-shrink-0"></i>
+        Read-only access — we can never move your money
+      </li>
+      <li class="flex items-center gap-3">
+        <i data-lucide="refresh-cw" class="h-5 w-5 text-green-500 flex-shrink-0"></i>
+        Automatic nightly sync — always up to date
+      </li>
+    </ul>
+
+    <button id="connect-btn"
+      class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+      <i data-lucide="link" class="h-5 w-5"></i>
+      Connect with Plaid
+    </button>
+
+    <p class="text-xs text-gray-400 text-center mt-4">
+      Powered by Plaid — trusted by millions of Americans.
+      <br>Your login credentials are never stored on our servers.
+    </p>
+  </div>
+
+  <div class="mt-6 text-center">
+    <p class="text-sm text-gray-500">Prefer to upload manually?
+      <a href="{{ url_for('portal.upload_statement') }}" class="text-blue-600 hover:underline">Upload a CSV instead</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script>
+lucide.createIcons();
+
+document.getElementById('connect-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('connect-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+
+  try {
+    const res = await fetch('/portal/connect-bank/token', {method: 'POST'});
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    const handler = Plaid.create({
+      token: data.link_token,
+      onSuccess: async (public_token, metadata) => {
+        const exRes = await fetch('/portal/connect-bank/exchange', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            public_token,
+            institution_name: metadata.institution?.name || 'Bank'
+          })
+        });
+        const exData = await exRes.json();
+        if (exData.success) {
+          window.location.href = '/portal/?connected=1';
+        } else {
+          alert('Error: ' + exData.error);
+          btn.disabled = false;
+          btn.textContent = 'Connect with Plaid';
+        }
+      },
+      onExit: () => {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="link" class="h-5 w-5"></i> Connect with Plaid';
+        lucide.createIcons();
+      }
+    });
+    handler.open();
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Connect with Plaid';
+  }
+});
+</script>
+{% endblock %}

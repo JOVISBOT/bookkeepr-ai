@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block title %}Chart of Accounts{% endblock %}
 
 {% block content %}
@@ -12,10 +11,16 @@
           <h1 class="text-3xl font-bold text-gray-900">Chart of Accounts</h1>
           <p class="text-gray-600 mt-1">Your business's financial structure</p>
         </div>
-        <button class="bk-btn-primary">
-          <i data-lucide="plus" class="h-4 w-4"></i>
-          Add Account
-        </button>
+        <div class="flex gap-2">
+          {% if company %}
+          <button onclick="seedGaap()" class="bk-btn-secondary" title="Populate all 52 standard GAAP accounts">
+            <i data-lucide="database" class="h-4 w-4"></i> Seed GAAP Accounts
+          </button>
+          {% endif %}
+          <button onclick="openAddModal()" class="bk-btn-primary">
+            <i data-lucide="plus" class="h-4 w-4"></i> Add Account
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -23,70 +28,105 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <div class="bk-card">
-        <div class="text-xs uppercase text-gray-500 tracking-wide">Total Accounts</div>
-        <div class="text-2xl font-bold text-gray-900 mt-1">{{ accounts|length|default(0) }}</div>
-        <div class="text-xs text-gray-500 mt-1">active</div>
+    {% set asset_ct     = accounts | selectattr('classification', 'equalto', 'Asset')     | list | length %}
+    {% set liability_ct = accounts | selectattr('classification', 'equalto', 'Liability') | list | length %}
+    {% set revenue_ct   = accounts | selectattr('classification', 'equalto', 'Revenue')   | list | length %}
+    {% set expense_ct   = accounts | selectattr('classification', 'equalto', 'Expense')   | list | length %}
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div class="bk-card text-center">
+        <div class="text-2xl font-bold text-gray-900">{{ accounts | length }}</div>
+        <div class="text-xs text-gray-500 mt-1">Total Accounts</div>
       </div>
-      <div class="bk-card">
-        <div class="text-xs uppercase text-gray-500 tracking-wide">Assets</div>
-        <div class="text-2xl font-bold text-gray-900 mt-1">{{ accounts|selectattr('type', 'equalto', 'asset')|list|length|default(0) }}</div>
-        <div class="text-xs text-gray-500 mt-1">asset accounts</div>
+      <div class="bk-card text-center">
+        <div class="text-2xl font-bold text-blue-600">{{ asset_ct }}</div>
+        <div class="text-xs text-gray-500 mt-1">Assets</div>
       </div>
-      <div class="bk-card">
-        <div class="text-xs uppercase text-gray-500 tracking-wide">Liabilities</div>
-        <div class="text-2xl font-bold text-gray-900 mt-1">{{ accounts|selectattr('type', 'equalto', 'liability')|list|length|default(0) }}</div>
-        <div class="text-xs text-gray-500 mt-1">liability accounts</div>
+      <div class="bk-card text-center">
+        <div class="text-2xl font-bold text-red-500">{{ liability_ct }}</div>
+        <div class="text-xs text-gray-500 mt-1">Liabilities</div>
       </div>
-      <div class="bk-card">
-        <div class="text-xs uppercase text-gray-500 tracking-wide">Revenue</div>
-        <div class="text-2xl font-bold text-gray-900 mt-1">{{ accounts|selectattr('type', 'equalto', 'revenue')|list|length|default(0) }}</div>
-        <div class="text-xs text-gray-500 mt-1">revenue accounts</div>
+      <div class="bk-card text-center">
+        <div class="text-2xl font-bold text-green-600">{{ revenue_ct }}</div>
+        <div class="text-xs text-gray-500 mt-1">Revenue</div>
+      </div>
+      <div class="bk-card text-center">
+        <div class="text-2xl font-bold text-orange-500">{{ expense_ct }}</div>
+        <div class="text-xs text-gray-500 mt-1">Expenses</div>
       </div>
     </div>
 
     <!-- Table -->
     <div class="bk-card p-0 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">All Accounts</h2>
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center gap-3">
+        <h2 class="text-lg font-semibold text-gray-900 flex-1">All Accounts</h2>
+        <input type="text" id="acctSearch" placeholder="Search accounts…" class="bk-input"
+               oninput="filterAccounts(this.value)">
       </div>
       <div class="overflow-x-auto">
-        <table class="bk-table">
+        <table class="bk-table" id="acctTable">
           <thead>
             <tr>
+              <th>Number</th>
               <th>Account Name</th>
               <th>Type</th>
-              <th>Number</th>
+              <th>Classification</th>
               <th class="text-right">Balance</th>
-              <th>Status</th>
               <th class="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {% for account in accounts %}
-            <tr>
-              <td class="font-medium">{{ account.name }}</td>
-              <td><span class="bk-badge bk-badge-info">{{ account.type|title }}</span></td>
-              <td class="text-gray-600">{{ account.account_number or '-' }}</td>
-              <td class="text-right tabular-nums {% if account.balance > 0 %}text-green-600{% else %}text-red-600{% endif %} font-medium">
-                {% if account.balance > 0 %}+{% endif %}${{ "%.2f"|format(account.balance|abs) }}
+            {% for acct in accounts %}
+            <tr data-name="{{ acct.name | lower }}" data-number="{{ acct.account_number or '' }}">
+              <td class="text-gray-600 tabular-nums">{{ acct.account_number or '—' }}</td>
+              <td class="font-medium">{{ acct.name }}</td>
+              <td class="text-sm text-gray-600">{{ acct.account_type or '—' }}</td>
+              <td>
+                {% set cls = acct.classification or 'Other' %}
+                {% if cls == 'Asset' %}
+                  <span class="bk-badge bk-badge-info">Asset</span>
+                {% elif cls == 'Liability' %}
+                  <span class="bk-badge bk-badge-error">Liability</span>
+                {% elif cls == 'Revenue' %}
+                  <span class="bk-badge bk-badge-success">Revenue</span>
+                {% elif cls == 'Expense' %}
+                  <span class="bk-badge" style="background:#fff7ed;color:#c2410c;">Expense</span>
+                {% elif cls == 'Equity' %}
+                  <span class="bk-badge" style="background:#f5f3ff;color:#7c3aed;">Equity</span>
+                {% else %}
+                  <span class="bk-badge">{{ cls }}</span>
+                {% endif %}
               </td>
-              <td><span class="bk-badge bk-badge-success">{{ account.status|default('Active') }}</span></td>
-              <td class="text-right"><a href="#" class="bk-btn-secondary text-xs">View</a></td>
+              <td class="text-right tabular-nums font-medium
+                {% if acct.current_balance and acct.current_balance > 0 %}text-green-600
+                {% elif acct.current_balance and acct.current_balance < 0 %}text-red-600
+                {% else %}text-gray-400{% endif %}">
+                ${{ "%.2f"|format((acct.current_balance or 0)|abs) }}
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button onclick="openEditModal({{ acct.id }}, {{ acct.name|tojson }}, {{ acct.account_type|tojson }}, {{ (acct.account_number or '')|tojson }}, {{ (acct.description or '')|tojson }})"
+                        class="bk-btn-secondary text-xs mr-1">Edit</button>
+                <button onclick="deleteAccount({{ acct.id }}, {{ acct.name|tojson }})"
+                        class="text-xs text-red-500 hover:text-red-700 font-medium px-2">Delete</button>
+              </td>
             </tr>
             {% else %}
-            <tr>
+            <tr id="emptyRow">
               <td colspan="6" class="text-center py-12">
                 <div class="inline-flex p-4 rounded-full mb-3" style="background: var(--bk-primary-light);">
                   <i data-lucide="folder-tree" class="h-8 w-8" style="color: var(--bk-primary);"></i>
                 </div>
                 <p class="text-gray-700 font-medium mb-1">No accounts yet</p>
-                <p class="text-gray-500 text-sm mb-4">Connect QuickBooks to import your Chart of Accounts</p>
-                <button class="bk-btn-primary" onclick="window.location.href='/quickbooks/connect'">
-                  <i data-lucide="link" class="h-4 w-4"></i>
-                  Connect QuickBooks
-                </button>
+                <p class="text-gray-500 text-sm mb-4">Add accounts manually or seed the GAAP chart of accounts</p>
+                <div class="flex gap-2 justify-center">
+                  {% if company %}
+                  <button onclick="seedGaap()" class="bk-btn-primary">
+                    <i data-lucide="database" class="h-4 w-4"></i> Seed GAAP Accounts
+                  </button>
+                  {% endif %}
+                  <button onclick="openAddModal()" class="bk-btn-secondary">
+                    <i data-lucide="plus" class="h-4 w-4"></i> Add Account
+                  </button>
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -94,6 +134,164 @@
         </table>
       </div>
     </div>
+
   </div>
 </div>
+
+<!-- Add / Edit Account Modal -->
+<div id="acctModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+    <h3 id="modalTitle" class="text-lg font-semibold text-gray-900 mb-4">Add Account</h3>
+    <input type="hidden" id="editAccountId">
+
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+          <input id="m_number" type="text" class="bk-input w-full" placeholder="e.g. 6600">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Account Type <span class="text-red-500">*</span></label>
+          <select id="m_type" class="bk-input w-full">
+            <option value="Bank">Bank</option>
+            <option value="Accounts Receivable">Accounts Receivable</option>
+            <option value="Other Current Asset">Other Current Asset</option>
+            <option value="Fixed Asset">Fixed Asset</option>
+            <option value="Other Asset">Other Asset</option>
+            <option value="Accounts Payable">Accounts Payable</option>
+            <option value="Credit Card">Credit Card</option>
+            <option value="Other Current Liability">Other Current Liability</option>
+            <option value="Long Term Liability">Long Term Liability</option>
+            <option value="Equity">Equity</option>
+            <option value="Retained Earnings">Retained Earnings</option>
+            <option value="Service/Fee Income">Service/Fee Income</option>
+            <option value="Sales of Product Income">Sales of Product Income</option>
+            <option value="Other Income">Other Income</option>
+            <option value="Cost of Goods Sold">Cost of Goods Sold</option>
+            <option value="Payroll Expenses" selected>Payroll Expenses</option>
+            <option value="Advertising/Promotional">Advertising/Promotional</option>
+            <option value="Bank Charges">Bank Charges</option>
+            <option value="Insurance">Insurance</option>
+            <option value="Entertainment Meals">Entertainment Meals</option>
+            <option value="Office/General Administrative">Office/General Administrative</option>
+            <option value="Legal & Professional Fees">Legal &amp; Professional Fees</option>
+            <option value="Rent or Lease">Rent or Lease</option>
+            <option value="Repairs & Maintenance">Repairs &amp; Maintenance</option>
+            <option value="Computer and Internet Expenses">Computer and Internet Expenses</option>
+            <option value="Other Business Expenses">Other Business Expenses</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Vehicle">Vehicle</option>
+            <option value="Travel">Travel</option>
+            <option value="Taxes & Licenses">Taxes &amp; Licenses</option>
+            <option value="Interest Paid">Interest Paid</option>
+            <option value="Other Expense">Other Expense</option>
+            <option value="Income Tax Expense">Income Tax Expense</option>
+            <option value="Other Miscellaneous Service Cost">Other Miscellaneous Service Cost</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Account Name <span class="text-red-500">*</span></label>
+        <input id="m_name" type="text" class="bk-input w-full" placeholder="e.g. Payroll - Salaries & Wages">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea id="m_desc" class="bk-input w-full" rows="2" placeholder="Optional description…"></textarea>
+      </div>
+    </div>
+
+    <div class="flex gap-2 justify-end mt-5">
+      <button onclick="closeModal()" class="bk-btn-secondary">Cancel</button>
+      <button onclick="saveAccount()" class="bk-btn-primary">Save Account</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COMPANY_ID = {{ company.id if company else 'null' }};
+
+function filterAccounts(q) {
+  const rows = document.querySelectorAll('#acctTable tbody tr[data-name]');
+  q = q.toLowerCase();
+  rows.forEach(r => {
+    const match = r.dataset.name.includes(q) || r.dataset.number.includes(q);
+    r.style.display = match ? '' : 'none';
+  });
+}
+
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = 'Add Account';
+  document.getElementById('editAccountId').value = '';
+  document.getElementById('m_name').value = '';
+  document.getElementById('m_number').value = '';
+  document.getElementById('m_type').value = 'Payroll Expenses';
+  document.getElementById('m_desc').value = '';
+  document.getElementById('acctModal').classList.remove('hidden');
+}
+
+function openEditModal(id, name, type, number, desc) {
+  document.getElementById('modalTitle').textContent = 'Edit Account';
+  document.getElementById('editAccountId').value = id;
+  document.getElementById('m_name').value = name;
+  document.getElementById('m_number').value = number;
+  document.getElementById('m_type').value = type || 'Payroll Expenses';
+  document.getElementById('m_desc').value = desc;
+  document.getElementById('acctModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('acctModal').classList.add('hidden');
+}
+
+async function saveAccount() {
+  const id = document.getElementById('editAccountId').value;
+  const payload = {
+    name: document.getElementById('m_name').value.trim(),
+    account_type: document.getElementById('m_type').value,
+    account_number: document.getElementById('m_number').value.trim(),
+    description: document.getElementById('m_desc').value.trim(),
+  };
+  if (!payload.name) { alert('Account name is required.'); return; }
+
+  let url = '/api/v1/accounts';
+  let method = 'POST';
+  if (id) { url += '/' + id; method = 'PUT'; }
+
+  const r = await fetch(url, {
+    method,
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  });
+  const data = await r.json();
+  if (data.success) { closeModal(); location.reload(); }
+  else alert('Error: ' + data.error);
+}
+
+async function deleteAccount(id, name) {
+  if (!confirm(`Deactivate account "${name}"? It will no longer appear in dropdowns.`)) return;
+  const r = await fetch(`/api/v1/accounts/${id}`, {method: 'DELETE'});
+  const data = await r.json();
+  if (data.success) location.reload();
+  else alert('Error: ' + data.error);
+}
+
+async function seedGaap() {
+  if (!COMPANY_ID) { alert('No company found.'); return; }
+  const btn = event.currentTarget;
+  btn.disabled = true; btn.textContent = 'Seeding…';
+  const r = await fetch(`/api/v1/companies/${COMPANY_ID}/setup-gaap-coa`, {method: 'POST'});
+  const data = await r.json();
+  btn.disabled = false;
+  if (data.success) { alert(data.message); location.reload(); }
+  else alert('Error: ' + (data.error || 'Unknown'));
+}
+
+document.getElementById('acctModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+lucide.createIcons();
+</script>
 {% endblock %}

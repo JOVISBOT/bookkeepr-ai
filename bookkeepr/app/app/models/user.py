@@ -36,7 +36,7 @@ class User(UserMixin, db.Model):
     last_login_at = db.Column(db.DateTime)
     
     # Relationships
-    companies = db.relationship('Company', backref='owner', lazy='dynamic', cascade='all, delete-orphan')
+    companies = db.relationship('Company', foreign_keys='[Company.user_id]', backref='owner', lazy='dynamic', cascade='all, delete-orphan')
     
     def set_password(self, password):
         """Hash and set password"""

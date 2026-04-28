@@ -50,12 +50,11 @@ class QuickBooksAuthService:
             Scopes.EMAIL       # User email
         ]
         
-        auth_url = self.auth_client.get_authorization_url(scopes)
-        
-        # The AuthClient automatically generates and stores state for CSRF protection
-        # We don't need to add it manually
-        logger.info(f"Generated auth URL with state: {auth_url[:100]}...")
-        logger.info(f"Generated auth URL: {auth_url}")
+        kwargs = {}
+        if state:
+            kwargs['state'] = state
+        auth_url = self.auth_client.get_authorization_url(scopes, **kwargs)
+        logger.info(f"Generated auth URL (state={'set' if state else 'auto'}): {auth_url[:80]}...")
         return auth_url
     
     def exchange_code_for_token(self, auth_code: str, realm_id: str) -> Dict:

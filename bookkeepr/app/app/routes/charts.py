@@ -9,12 +9,25 @@ import json
 bp = Blueprint('charts', __name__)
 
 
+def _get_current_user_or_none():
+    """Get current user if authenticated, else None"""
+    try:
+        if current_user.is_authenticated:
+            return current_user
+    except:
+        pass
+    return None
+
+
 @bp.route('/api/v1/data/pnl')
-@login_required
 def pnl_data():
     """Get P&L data for charts"""
+    user = _get_current_user_or_none()
+    if not user:
+        return jsonify({'success': False, 'error': 'Authentication required'}), 401
+    
     # Get user's company
-    company = Company.query.filter_by(user_id=current_user.id).first()
+    company = Company.query.filter_by(user_id=user.id).first()
     if not company:
         return jsonify({'labels': [], 'income': [], 'expenses': [], 'profit': []})
     
@@ -57,11 +70,14 @@ def pnl_data():
 
 
 @bp.route('/api/v1/data/balance')
-@login_required
 def balance_data():
     """Get balance data for charts"""
+    user = _get_current_user_or_none()
+    if not user:
+        return jsonify({'success': False, 'error': 'Authentication required'}), 401
+    
     # Get user's company
-    company = Company.query.filter_by(user_id=current_user.id).first()
+    company = Company.query.filter_by(user_id=user.id).first()
     if not company:
         return jsonify({'assets': 0, 'liabilities': 0, 'equity': 0})
     
@@ -87,11 +103,14 @@ def balance_data():
 
 
 @bp.route('/api/v1/data/expenses')
-@login_required
 def expenses_data():
     """Get expense breakdown by category"""
+    user = _get_current_user_or_none()
+    if not user:
+        return jsonify({'success': False, 'error': 'Authentication required'}), 401
+    
     # Get user's company
-    company = Company.query.filter_by(user_id=current_user.id).first()
+    company = Company.query.filter_by(user_id=user.id).first()
     if not company:
         return jsonify({'labels': [], 'data': []})
     

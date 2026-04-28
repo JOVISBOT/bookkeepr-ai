@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Classification Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Classification Knowledge Base</h1>
+        <p class="text-gray-600 mt-1">What the system has learned from your approved transactions — no AI APIs needed</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    {% if not company %}
+    <div class="bk-card text-center py-16">
+      <p class="text-gray-500">Connect QuickBooks and start reviewing transactions to build your knowledge base.</p>
+    </div>
+    {% else %}
+
+    <!-- Stats row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bk-card text-center py-5">
+        <div class="text-3xl font-bold" style="color:var(--bk-primary)">{{ stats.approved_transactions }}</div>
+        <div class="text-xs text-gray-500 mt-1">Approved Transactions</div>
+      </div>
+      <div class="bk-card text-center py-5">
+        <div class="text-3xl font-bold text-gray-900">{{ stats.unique_vendors }}</div>
+        <div class="text-xs text-gray-500 mt-1">Unique Vendors Seen</div>
+      </div>
+      <div class="bk-card text-center py-5">
+        <div class="text-3xl font-bold text-green-600">{{ stats.high_confidence_vendors }}</div>
+        <div class="text-xs text-gray-500 mt-1">Vendors Auto-Classifiable</div>
+        <div class="text-xs text-gray-400">(3+ approved each)</div>
+      </div>
+      <div class="bk-card text-center py-5">
+        <div class="text-3xl font-bold text-purple-600">{{ stats.coverage_pct }}%</div>
+        <div class="text-xs text-gray-500 mt-1">Vendor Coverage</div>
+      </div>
+    </div>
+
+    <!-- Phase indicator -->
+    {% if stats.approved_transactions < 20 %}
+    <div class="bk-card mb-6 border-l-4 border-amber-400" style="background:#fffbeb">
+      <div class="flex items-start gap-3">
+        <i data-lucide="info" class="h-5 w-5 text-amber-500 shrink-0 mt-0.5"></i>
+        <div>
+          <p class="font-semibold text-amber-900">Bootstrap phase — GAAP rules are driving classification</p>
+          <p class="text-sm text-amber-700 mt-0.5">Approve {{ 20 - stats.approved_transactions }} more transactions and the system will start using your own history to classify new ones automatically.</p>
+          <div class="mt-2 h-2 bg-amber-100 rounded-full overflow-hidden">
+            <div class="h-2 bg-amber-400 rounded-full" style="width:{{ [stats.approved_transactions * 5, 100]|min }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% elif stats.high_confidence_vendors > 0 %}
+    <div class="bk-card mb-6 border-l-4 border-green-400" style="background:#f0fdf4">
+      <div class="flex items-center gap-3">
+        <i data-lucide="check-circle" class="h-5 w-5 text-green-600 shrink-0"></i>
+        <div>
+          <p class="font-semibold text-green-900">Local knowledge is active</p>
+          <p class="text-sm text-green-700">{{ stats.high_confidence_vendors }} vendors will be auto-classified from history. GAAP rules fill the gaps.</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Vendor knowledge table -->
+    <div class="bk-card p-0 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center gap-3">
+        <h2 class="text-lg font-semibold text-gray-900 flex-1">Learned Vendor → Category Mappings</h2>
+        <input type="text" placeholder="Search…" oninput="filterTable(this.value)"
+               class="bk-input" style="width:200px">
+      </div>
+
+      {% if vendor_knowledge %}
+      <div class="overflow-x-auto">
+        <table class="bk-table" id="kbTable">
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th>Auto-Classifies As</th>
+              <th class="text-right">Times Approved</th>
+              <th class="text-center">Confidence</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in vendor_knowledge %}
+            <tr data-vendor="{{ row.vendor | lower }}">
+              <td class="font-medium text-gray-900">{{ row.vendor }}</td>
+              <td class="text-sm text-gray-700">{{ row.category }}</td>
+              <td class="text-right tabular-nums text-gray-600">{{ row.count }}</td>
+              <td class="text-center">
+                {% if row.confidence >= 85 %}
+                  <span class="bk-badge bk-badge-success">High {{ row.confidence }}%</span>
+                {% elif row.confidence >= 65 %}
+                  <span class="bk-badge bk-badge-warning">Med {{ row.confidence }}%</span>
+                {% else %}
+                  <span class="bk-badge">Low {{ row.confidence }}%</span>
+                {% endif %}
+              </td>
+              <td class="text-xs text-gray-400">Transaction history</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-16 text-gray-400">
+        <i data-lucide="database" class="h-10 w-10 mx-auto mb-3"></i>
+        <p class="font-medium">No learned patterns yet</p>
+        <p class="text-sm mt-1">Approve transactions in the Review Queue to start building the knowledge base.</p>
+        <a href="{{ url_for('review.index') }}" class="bk-btn-primary mt-4 inline-flex">Go to Review Queue</a>
+      </div>
+      {% endif %}
+    </div>
+
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterTable(val) {
+  const q = val.toLowerCase();
+  document.querySelectorAll('#kbTable tbody tr').forEach(row => {
+    row.style.display = row.dataset.vendor.includes(q) ? '' : 'none';
+  });
+}
+lucide.createIcons();
+</script>
+{% endblock %}

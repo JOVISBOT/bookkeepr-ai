@@ -2,7 +2,7 @@
 from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
-from sqlalchemy import func
+from sqlalchemy import func, case
 
 from extensions import db
 from app.models.transaction import Transaction
@@ -59,7 +59,18 @@ def index():
         if total_reviewed > 0:
             stats['accuracy_rate'] = round((stats['approved_today'] / total_reviewed) * 100, 1)
     
-    return render_template('review.html', transactions=transactions, stats=stats)
+    vendors = []
+    if company:
+        from sqlalchemy import distinct
+        vendor_rows = db.session.query(distinct(Transaction.vendor_name)).filter(
+            Transaction.company_id == company.id,
+            Transaction.vendor_name.isnot(None),
+            Transaction.vendor_name != ''
+        ).order_by(Transaction.vendor_name).all()
+        vendors = [r[0] for r in vendor_rows]
+
+    return render_template('review.html', transactions=transactions, stats=stats,
+                           vendors=vendors, company=company)
 
 
 @bp.route('/review/approve/<int:transaction_id>', methods=['POST'])
@@ -190,6 +201,80 @@ def batch_approve():
     })
 
 
+@bp.route('/review/delete/<int:transaction_id>', methods=['POST'])
+@login_required
+def delete_transaction(transaction_id):
+    """Hard-delete a transaction from the review queue"""
+    company = Company.query.filter_by(user_id=current_user.id).first()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company found'}), 404
+    txn = Transaction.query.filter_by(id=transaction_id, company_id=company.id).first()
+    if not txn:
+        return jsonify({'success': False, 'error': 'Transaction not found'}), 404
+    db.session.delete(txn)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/review/exclude/<int:transaction_id>', methods=['POST'])
+@login_required
+def exclude_transaction(transaction_id):
+    """Exclude a transaction (skip from review, mark as excluded)"""
+    company = Company.query.filter_by(user_id=current_user.id).first()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company found'}), 404
+    txn = Transaction.query.filter_by(id=transaction_id, company_id=company.id).first()
+    if not txn:
+        return jsonify({'success': False, 'error': 'Transaction not found'}), 404
+    txn.review_status = 'excluded'
+    txn.categorization_status = 'categorized'
+    txn.reviewed_by_user_id = current_user.id
+    txn.reviewed_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/review/batch-delete', methods=['POST'])
+@login_required
+def batch_delete():
+    """Batch hard-delete transactions"""
+    company = Company.query.filter_by(user_id=current_user.id).first()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company found'}), 404
+    data = request.get_json() or {}
+    ids = data.get('transaction_ids', [])
+    count = 0
+    for txn_id in ids:
+        txn = Transaction.query.filter_by(id=txn_id, company_id=company.id).first()
+        if txn:
+            db.session.delete(txn)
+            count += 1
+    db.session.commit()
+    return jsonify({'success': True, 'deleted_count': count})
+
+
+@bp.route('/review/batch-exclude', methods=['POST'])
+@login_required
+def batch_exclude():
+    """Batch exclude transactions"""
+    company = Company.query.filter_by(user_id=current_user.id).first()
+    if not company:
+        return jsonify({'success': False, 'error': 'No company found'}), 404
+    data = request.get_json() or {}
+    ids = data.get('transaction_ids', [])
+    count = 0
+    for txn_id in ids:
+        txn = Transaction.query.filter_by(id=txn_id, company_id=company.id).first()
+        if txn:
+            txn.review_status = 'excluded'
+            txn.categorization_status = 'categorized'
+            txn.reviewed_by_user_id = current_user.id
+            txn.reviewed_at = datetime.utcnow()
+            count += 1
+    db.session.commit()
+    return jsonify({'success': True, 'excluded_count': count})
+
+
 @bp.route('/review/metrics')
 @login_required
 def metrics():
@@ -218,12 +303,12 @@ def metrics():
     accuracy = round((total_approved / total_reviewed) * 100, 1) if total_reviewed > 0 else 0
     
     # Daily breakdown (last 7 days)
-    from sqlalchemy import func
+    from sqlalchemy import func, case
     daily_stats = db.session.query(
         func.date(Transaction.reviewed_at).label('date'),
         func.count().label('total'),
-        func.sum(func.case((Transaction.review_status == 'approved', 1), else_=0)).label('approved'),
-        func.sum(func.case((Transaction.review_status == 'rejected', 1), else_=0)).label('rejected')
+        func.sum(case((Transaction.review_status == 'approved', 1), else_=0)).label('approved'),
+        func.sum(case((Transaction.review_status == 'rejected', 1), else_=0)).label('rejected')
     ).filter(
         Transaction.company_id == company.id,
         Transaction.reviewed_at.isnot(None)

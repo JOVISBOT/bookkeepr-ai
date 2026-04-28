@@ -29,10 +29,11 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
       <!-- Row 1: Primary filters always visible -->
-      <div class="flex flex-wrap items-end gap-3">
-        <div class="flex-shrink-0">
+      <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+      <div class="flex flex-wrap items-end gap-3 min-w-0">
+        <div class="flex-none">
           <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Report</label>
-          <select id="reportType" class="bk-input min-w-[180px]">
+          <select id="reportType" class="bk-input" style="width:176px">
             <option value="pnl">Profit & Loss</option>
             <option value="balance">Balance Sheet</option>
             <option value="cashflow">Cash Flow</option>
@@ -46,9 +47,9 @@
             <option value="tax-summary">Tax-Ready Summary</option>
           </select>
         </div>
-        <div>
+        <div class="flex-none">
           <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Period</label>
-          <select id="filterPeriod" class="bk-input min-w-[140px]">
+          <select id="filterPeriod" class="bk-input" style="width:144px">
             <option value="this_month">This Month</option>
             <option value="last_month">Last Month</option>
             <option value="this_quarter">This Quarter</option>
@@ -61,28 +62,28 @@
             <option value="custom">Custom Range...</option>
           </select>
         </div>
-        <div>
+        <div class="flex-none">
           <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Compare</label>
-          <select id="filterCompare" class="bk-input min-w-[150px]">
+          <select id="filterCompare" class="bk-input" style="width:144px">
             <option value="none">No comparison</option>
             <option value="prev_period">vs Prev Period</option>
             <option value="prev_year">vs Last Year</option>
             <option value="budget">vs Budget</option>
           </select>
         </div>
-        <div>
+        <div class="flex-none">
           <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Category</label>
-          <select id="filterCategory" class="bk-input min-w-[140px]">
+          <select id="filterCategory" class="bk-input" style="width:144px">
             <option value="">All Categories</option>
           </select>
         </div>
-        <div>
+        <div class="flex-none">
           <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Account</label>
-          <select id="filterAccount" class="bk-input min-w-[140px]">
+          <select id="filterAccount" class="bk-input" style="width:144px">
             <option value="">All Accounts</option>
           </select>
         </div>
-        <div id="customDates" class="flex gap-2 hidden">
+        <div id="customDates" class="flex gap-2 hidden flex-none">
           <div>
             <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">From</label>
             <input type="date" id="filterStart" class="bk-input" />
@@ -92,10 +93,10 @@
             <input type="date" id="filterEnd" class="bk-input" />
           </div>
         </div>
-        <div class="ml-auto flex gap-2">
+        <div class="flex gap-2 flex-none sm:ml-auto mt-1">
           <button onclick="toggleAdvanced()" class="bk-btn-secondary text-sm" id="advBtn">
             <i data-lucide="sliders" class="h-4 w-4"></i>
-            More Filters
+            <span class="hidden sm:inline">More Filters</span>
           </button>
           <button onclick="generateReport()" class="bk-btn-primary text-sm">
             <i data-lucide="play" class="h-4 w-4"></i>
@@ -103,9 +104,9 @@
           </button>
           <button onclick="resetFilters()" class="bk-btn-secondary text-sm">
             <i data-lucide="x" class="h-4 w-4"></i>
-            Reset
           </button>
         </div>
+      </div>
       </div>
 
       <!-- Row 2: Advanced filters (toggle) -->

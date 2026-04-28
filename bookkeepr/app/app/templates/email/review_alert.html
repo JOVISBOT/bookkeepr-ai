@@ -1,0 +1,23 @@
+{% extends "email/base.html" %}
+{% block subject %}{{ pending_count }} transaction{{ 's' if pending_count != 1 else '' }} need review{% endblock %}
+
+{% block content %}
+<h1>Transactions need your review</h1>
+<p>Hi {{ first_name }}, the AI has classified transactions for <strong>{{ company_name }}</strong> and {{ pending_count }} need{{ '' if pending_count != 1 else 's' }} your approval.</p>
+
+<div class="stat-row">
+  <div class="stat">
+    <div class="stat-value">{{ pending_count }}</div>
+    <div class="stat-label">Pending Review</div>
+  </div>
+</div>
+
+<p>Reviewing takes about 30 seconds per transaction. Approve, correct the category, or flag anything that looks off.</p>
+
+<p style="text-align:center; margin:32px 0;">
+  <a class="btn" href="{{ review_url }}">Review Now →</a>
+</p>
+
+<hr class="divider">
+<p class="meta">The more transactions you approve, the smarter the AI gets — future transactions for the same vendor will be classified automatically.</p>
+{% endblock %}

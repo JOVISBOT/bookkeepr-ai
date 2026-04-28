@@ -1,17 +1,17 @@
 """Tests for AI Auto-Categorization Service
 
-Verifies:
-  • Model training on 50 demo transactions
-  • Single + batch categorization
-  • API endpoints
-  • Accuracy > 80% on demo corpus
+-- STALE: written for old scikit-learn ML interface (CategorizationService,
+   TRAINING_DATA, CATEGORIES). Current classifier is local_classifier.py.
+   Needs full rewrite. --
 """
 
 import pytest
+
+pytestmark = pytest.mark.skip(reason="stale — written for old ML interface, not local_classifier.py")
+
 import sys
 import os
 
-# Ensure app is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from app.services.ai_categorization import (

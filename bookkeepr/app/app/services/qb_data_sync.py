@@ -5,7 +5,7 @@ from quickbooks import QuickBooks
 from quickbooks.objects import Account as QBAccount
 from quickbooks.objects import Purchase, Deposit, JournalEntry, Payment
 from intuitlib.exceptions import AuthClientError
-from app import db
+from extensions import db
 from app.models.account import Account
 from app.models.transaction import Transaction
 from app.services.qb_auth import (
@@ -127,7 +127,8 @@ class QuickBooksDataSync:
             txn_result = self.sync_transactions(start_date, end_date)
             
             # Update company sync status
-            self.company.update_sync_status('success')
+            self.company.sync_status = 'success'
+            self.company.last_sync_at = datetime.utcnow()
             db.session.commit()
             
             return {
@@ -139,7 +140,8 @@ class QuickBooksDataSync:
             
         except TokenRefreshError as e:
             logger.error(f"Token refresh failed during sync for company {self.company.id}: {e}")
-            self.company.update_sync_status('error', f"Token refresh failed: {e}")
+            self.company.sync_status = 'error'
+            self.company.last_sync_at = datetime.utcnow()
             db.session.commit()
             return {
                 'success': False,
@@ -150,7 +152,8 @@ class QuickBooksDataSync:
             }
         except Exception as e:
             logger.error(f"Sync failed for company {self.company.id}: {e}")
-            self.company.update_sync_status('error', str(e))
+            self.company.sync_status = 'error'
+            self.company.last_sync_at = datetime.utcnow()
             db.session.commit()
             return {
                 'success': False,
@@ -404,11 +407,8 @@ class QuickBooksDataSync:
             existing.account_sub_type = getattr(qb_account, 'AccountSubType', None)
             existing.current_balance = getattr(qb_account, 'CurrentBalance', 0)
             existing.is_active = getattr(qb_account, 'Active', True)
-            existing.last_imported_at = datetime.utcnow()
-            
-            # Mark bank accounts
-            existing.is_bank_account = existing.account_type in ['Bank', 'Credit Card']
-            
+            existing.last_sync_at = datetime.utcnow()
+            existing.updated_at = datetime.utcnow()
             return 'updated'
         else:
             # Create new account
@@ -420,85 +420,115 @@ class QuickBooksDataSync:
                 account_sub_type=getattr(qb_account, 'AccountSubType', None),
                 current_balance=getattr(qb_account, 'CurrentBalance', 0) or 0,
                 is_active=getattr(qb_account, 'Active', True),
-                is_bank_account=getattr(qb_account, 'AccountType', '') in ['Bank', 'Credit Card'],
-                last_imported_at=datetime.utcnow()
+                last_sync_at=datetime.utcnow(),
             )
             db.session.add(account)
             return 'created'
     
+    def _classify_transaction(self, txn) -> None:
+        """Run local classifier on a Transaction object and update its fields in-place."""
+        try:
+            from app.services.local_classifier import classify as local_classify
+            result = local_classify(
+                txn.description or '',
+                txn.vendor_name or '',
+                float(txn.amount or 0),
+                self.company.id,
+            )
+            label = result['category']
+            confidence = result['confidence']
+            txn.suggested_category = label
+            txn.suggested_confidence = confidence
+            txn.categorized_by = 'ai'
+            raw = txn.raw_data or {}
+            raw['ai_explanation'] = result.get('explanation', label)
+            raw['classification_source'] = result.get('source', 'unknown')
+            txn.raw_data = raw
+
+            if confidence >= 80:
+                txn.category = label
+                txn.categorization_status = 'categorized'
+                # High-confidence auto-approvals still land in review queue so
+                # the user sees them; they just don't require manual category pick.
+            else:
+                txn.categorization_status = 'suggested'
+        except Exception as e:
+            logger.warning(f'Classification failed for transaction: {e}')
+
     def _upsert_transaction(self, qb_txn, txn_type: str) -> str:
         """
-        Create or update a transaction
-        
-        Args:
-            qb_txn: QB transaction object
-            txn_type: Transaction type (expense, income, etc.)
-            
-        Returns:
-            'created', 'updated', 'skipped', or 'error'
+        Create or update a transaction and auto-classify it.
+
+        Returns: 'created', 'updated', 'skipped'
         """
         qb_id = qb_txn.Id
-        
-        # Find existing transaction
+
         existing = Transaction.query.filter_by(
             company_id=self.company.id,
-            qb_transaction_id=qb_id
+            qbo_transaction_id=qb_id
         ).first()
-        
-        # Get metadata for CDC check
+
         last_updated = getattr(qb_txn, 'MetaData', None)
         if last_updated:
             last_updated = getattr(last_updated, 'LastUpdatedTime', None)
-        
-        # Extract transaction data
+
         txn_data = self._extract_transaction_data(qb_txn, txn_type)
-        
         if not txn_data:
             return 'skipped'
-        
+
         if existing:
-            # Check if actually changed (CDC optimization)
             if last_updated and existing.updated_at:
                 try:
                     qb_time = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
-                    if qb_time <= existing.updated_at and existing.status != 'pending':
-                        return 'skipped'  # No change and already processed
-                except:
+                    if qb_time <= existing.updated_at and existing.review_status != 'pending':
+                        return 'skipped'
+                except Exception:
                     pass
-            
-            # Update existing transaction
+
             existing.description = txn_data.get('description')
             existing.amount = txn_data.get('amount', 0)
             existing.transaction_date = txn_data.get('transaction_date')
-            existing.payee_name = txn_data.get('payee_name')
-            existing.bank_account_id = txn_data.get('bank_account_id')
-            existing.bank_account_name = txn_data.get('bank_account_name')
+            existing.vendor_name = txn_data.get('payee_name')
+            existing.vendor_id = txn_data.get('payee_id')
+            existing.account_name = txn_data.get('bank_account_name')
             existing.updated_at = datetime.utcnow()
-            
+
+            # Re-classify if still uncategorized
+            if existing.categorization_status in ('uncategorized', 'suggested'):
+                self._classify_transaction(existing)
+
             return 'updated'
         else:
-            # Create new transaction
+            qb_acct_id = txn_data.get('qb_account_id')
+            local_account = None
+            if qb_acct_id:
+                local_account = Account.query.filter_by(
+                    company_id=self.company.id,
+                    qb_account_id=qb_acct_id
+                ).first()
+
+            ref_parts = [p for p in [txn_data.get('check_number'), txn_data.get('reference_number')] if p]
+            memo_str = ' | '.join(ref_parts) if ref_parts else None
+
             transaction = Transaction(
                 company_id=self.company.id,
-                qb_transaction_id=qb_id,
-                qb_account_id=txn_data.get('qb_account_id'),
+                qbo_transaction_id=qb_id,
+                account_id=local_account.id if local_account else None,
+                account_name=txn_data.get('bank_account_name'),
                 transaction_type=txn_type,
                 description=txn_data.get('description'),
                 amount=txn_data.get('amount', 0),
-                currency='USD',
                 transaction_date=txn_data.get('transaction_date'),
-                posted_date=txn_data.get('posted_date'),
-                payee_name=txn_data.get('payee_name'),
-                payee_id=txn_data.get('payee_id'),
-                bank_account_id=txn_data.get('bank_account_id'),
-                bank_account_name=txn_data.get('bank_account_name'),
-                check_number=txn_data.get('check_number'),
-                reference_number=txn_data.get('reference_number'),
-                status='pending',
-                needs_review=True,
-                imported_at=datetime.utcnow()
+                vendor_name=txn_data.get('payee_name'),
+                vendor_id=txn_data.get('payee_id'),
+                memo=memo_str,
+                review_status='pending',
+                categorization_status='uncategorized',
             )
             db.session.add(transaction)
+            db.session.flush()  # assign transaction.id before classifying
+
+            self._classify_transaction(transaction)
             return 'created'
     
     def _extract_transaction_data(self, qb_txn, txn_type: str) -> Optional[Dict]:

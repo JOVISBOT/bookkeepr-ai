@@ -68,7 +68,7 @@ class TestRegistration:
         
         # Verify user was created
         with app.app_context():
-            from src.models import User
+            from app.models.user import User
             user = User.query.filter_by(email='newuser@example.com').first()
             assert user is not None
             assert user.first_name == 'New'

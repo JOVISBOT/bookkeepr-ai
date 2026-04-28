@@ -1,0 +1,18 @@
+{% extends "email/base.html" %}
+{% block subject %}Welcome to {{ app_name }}{% endblock %}
+
+{% block content %}
+<h1>Welcome, {{ first_name }}! 🎉</h1>
+<p>Your 14-day free trial has started. Here's what you can do right now:</p>
+
+<p><strong>1. Connect QuickBooks</strong> — sync your accounts and transactions in seconds.</p>
+<p><strong>2. Review the AI classifications</strong> — our classifier auto-categorises transactions using GAAP rules. You approve or correct them.</p>
+<p><strong>3. Run your first report</strong> — Profit & Loss, Balance Sheet, or Cash Flow — all ready once transactions are synced.</p>
+
+<p style="text-align:center; margin:32px 0;">
+  <a class="btn" href="{{ dashboard_url }}">Open Dashboard →</a>
+</p>
+
+<hr class="divider">
+<p class="meta">If you have any questions, just reply to this email. We're here to help.</p>
+{% endblock %}

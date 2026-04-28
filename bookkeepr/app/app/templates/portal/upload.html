@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Upload Bank Statement{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div class="mb-8">
+    <a href="{{ url_for('portal.index') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+      <i data-lucide="arrow-left" class="h-4 w-4"></i> Back to Dashboard
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900">Upload Bank Statement</h1>
+    <p class="text-gray-500 mt-1">Upload a CSV file from your bank to import transactions manually.</p>
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 p-8">
+    <div id="drop-zone"
+      class="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+      <i data-lucide="upload-cloud" class="h-12 w-12 text-gray-400 mx-auto mb-3"></i>
+      <p class="text-gray-600 font-medium">Drop your CSV file here</p>
+      <p class="text-gray-400 text-sm mt-1">or click to browse</p>
+      <input type="file" id="file-input" accept=".csv" class="hidden">
+    </div>
+
+    <div id="file-info" class="hidden mt-4 p-4 bg-blue-50 rounded-lg flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i data-lucide="file-text" class="h-5 w-5 text-blue-600"></i>
+        <span id="file-name" class="text-sm font-medium text-blue-800"></span>
+      </div>
+      <button id="clear-btn" class="text-gray-400 hover:text-gray-600">
+        <i data-lucide="x" class="h-4 w-4"></i>
+      </button>
+    </div>
+
+    <button id="upload-btn" disabled
+      class="w-full mt-6 bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+      Import Transactions
+    </button>
+
+    <div id="result" class="hidden mt-4 p-4 rounded-lg text-sm font-medium"></div>
+
+    <div class="mt-6 text-xs text-gray-400 space-y-1">
+      <p class="font-medium text-gray-500">Supported formats:</p>
+      <p>• Chase, Bank of America, Wells Fargo, Citi — standard CSV exports</p>
+      <p>• Generic CSV with Date, Description, Amount columns</p>
+    </div>
+  </div>
+</div>
+
+<script>
+lucide.createIcons();
+let selectedFile = null;
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const fileInfo = document.getElementById('file-info');
+const fileName = document.getElementById('file-name');
+const uploadBtn = document.getElementById('upload-btn');
+const clearBtn = document.getElementById('clear-btn');
+const result = document.getElementById('result');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-blue-400', 'bg-blue-50'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-blue-400', 'bg-blue-50'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+  setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+clearBtn.addEventListener('click', () => { selectedFile = null; fileInfo.classList.add('hidden'); uploadBtn.disabled = true; });
+
+function setFile(f) {
+  if (!f || !f.name.endsWith('.csv')) { alert('Please select a CSV file.'); return; }
+  selectedFile = f;
+  fileName.textContent = f.name;
+  fileInfo.classList.remove('hidden');
+  uploadBtn.disabled = false;
+}
+
+uploadBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = 'Importing…';
+
+  const form = new FormData();
+  form.append('file', selectedFile);
+
+  try {
+    const res = await fetch('/portal/upload', {method: 'POST', body: form});
+    const data = await res.json();
+    result.classList.remove('hidden');
+    if (data.success) {
+      result.className = 'mt-4 p-4 rounded-lg text-sm font-medium bg-green-50 text-green-800';
+      result.textContent = `✓ Imported ${data.imported} transactions. AI categorization in progress.`;
+    } else {
+      result.className = 'mt-4 p-4 rounded-lg text-sm font-medium bg-red-50 text-red-800';
+      result.textContent = 'Error: ' + data.error;
+    }
+  } catch (e) {
+    result.classList.remove('hidden');
+    result.className = 'mt-4 p-4 rounded-lg text-sm font-medium bg-red-50 text-red-800';
+    result.textContent = 'Upload failed. Please try again.';
+  }
+
+  uploadBtn.textContent = 'Import Transactions';
+  uploadBtn.disabled = false;
+});
+</script>
+{% endblock %}

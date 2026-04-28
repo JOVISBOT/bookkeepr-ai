@@ -47,9 +47,19 @@
                     </ul>
                 </div>
                 <div class="p-6 pt-0">
+                    {% if plan.slug == 'enterprise' %}
+                    <a href="mailto:sales@bookkeepr.ai" class="block w-full text-center bg-gray-100 text-gray-900 hover:bg-gray-200 px-4 py-3 rounded-lg font-semibold transition-colors">
+                        {{ plan.cta }}
+                    </a>
+                    {% elif stripe_enabled %}
+                    <button onclick="startCheckout('{{ plan.slug }}')" class="block w-full text-center {% if plan.popular %}bg-blue-600 text-white hover:bg-blue-700{% else %}bg-gray-100 text-gray-900 hover:bg-gray-200{% endif %} px-4 py-3 rounded-lg font-semibold transition-colors cursor-pointer border-0">
+                        {{ plan.cta }}
+                    </button>
+                    {% else %}
                     <a href="{{ url_for('auth.register') }}" class="block w-full text-center {% if plan.popular %}bg-blue-600 text-white hover:bg-blue-700{% else %}bg-gray-100 text-gray-900 hover:bg-gray-200{% endif %} px-4 py-3 rounded-lg font-semibold transition-colors">
                         {{ plan.cta }}
                     </a>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -138,4 +148,36 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if stripe_enabled %}
+<script>
+async function startCheckout(plan) {
+    const btn = event.currentTarget;
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+    try {
+        const resp = await fetch('/billing/subscribe', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({plan, billing_cycle: 'monthly'}),
+        });
+        const data = await resp.json();
+        if (data.checkout_url) {
+            window.location.href = data.checkout_url;
+        } else {
+            alert(data.error || 'Something went wrong. Please try again.');
+            btn.disabled = false;
+            btn.textContent = label;
+        }
+    } catch {
+        alert('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = label;
+    }
+}
+</script>
+{% endif %}
 {% endblock %}

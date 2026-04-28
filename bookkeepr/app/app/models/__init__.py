@@ -7,5 +7,7 @@ from app.models.transaction import Transaction
 from app.models.category_rule import CategoryRule
 from app.models.bank_statement import BankStatement, BankStatementLine, ReconciliationMatch
 from app.models.audit_log import AuditLog
+from app.models.user_preference import UserPreference
 
-__all__ = ['Tenant', 'User', 'Company', 'Account', 'Transaction', 'CategoryRule', 'BankStatement', 'BankStatementLine', 'ReconciliationMatch', 'AuditLog']
+__all__ = ['Tenant', 'User', 'Company', 'Account', 'Transaction', 'CategoryRule',
+           'BankStatement', 'BankStatementLine', 'ReconciliationMatch', 'AuditLog', 'UserPreference']

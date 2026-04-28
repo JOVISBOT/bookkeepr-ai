@@ -236,6 +236,77 @@ def archive(client_id):
     return redirect(url_for('clients.index'))
 
 
+@bp.route('/<int:client_id>/invite', methods=['GET', 'POST'])
+@login_required
+@operator_required
+def invite(client_id):
+    """Create or reset client portal login credentials"""
+    import secrets, string
+
+    company = Company.query.filter_by(
+        id=client_id,
+        tenant_id=current_user.tenant_id,
+    ).first()
+    if not company:
+        abort(404)
+
+    existing_client = User.query.get(company.client_user_id) if company.client_user_id else None
+
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        if not email or '@' not in email:
+            flash('Valid email required', 'error')
+            return render_template('clients/invite.html', company=company, existing_client=existing_client)
+
+        # Reuse or create client user
+        client_user = User.query.filter_by(email=email).first()
+        temp_password = None
+
+        if not client_user:
+            alphabet = string.ascii_letters + string.digits
+            temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+            client_user = User(
+                email=email,
+                first_name=request.form.get('first_name', company.qbo_company_name or 'Client').strip(),
+                last_name=request.form.get('last_name', '').strip(),
+                role='client',
+                tenant_id=current_user.tenant_id,
+                is_active=True,
+            )
+            client_user.set_password(temp_password)
+            db.session.add(client_user)
+            db.session.flush()
+        elif client_user.role not in ('client', 'viewer'):
+            flash(f'{email} already exists as an operator account.', 'error')
+            return render_template('clients/invite.html', company=company, existing_client=existing_client)
+
+        company.client_user_id = client_user.id
+
+        AuditLog.log(
+            action='invite_client',
+            target_table='companies',
+            target_id=company.id,
+            user=current_user,
+            tenant_id=current_user.tenant_id,
+            new_value={'client_email': email},
+            request=request,
+        )
+        db.session.commit()
+
+        if temp_password:
+            flash(
+                f'Client account created! Email: {email} | Temp Password: {temp_password} — '
+                f'Share these credentials securely. Client should change password on first login.',
+                'success'
+            )
+        else:
+            flash(f'Existing user {email} linked to {company.qbo_company_name}.', 'success')
+
+        return redirect(url_for('clients.detail', client_id=client_id))
+
+    return render_template('clients/invite.html', company=company, existing_client=existing_client)
+
+
 # JSON API endpoints
 @bp.route('/api/list')
 @login_required
