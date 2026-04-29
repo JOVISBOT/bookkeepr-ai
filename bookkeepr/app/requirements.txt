@@ -43,7 +43,7 @@ python-dotenv==1.0.0
 requests==2.31.0
 
 # Payments — uncomment when Stripe keys are configured
-# stripe>=7.0.0
+stripe>=7.0.0
 
 # Bank feeds — uncomment when Plaid keys are configured
 # plaid-python==9.0.0

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, jsonify, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
-from extensions import db
+from extensions import db, csrf
 from app.models.subscription import SubscriptionPlan, UserSubscription, BillingInvoice
 
 bp = Blueprint('billing', __name__, url_prefix='/billing')
@@ -39,6 +39,7 @@ def get_plans():
 
 
 @bp.route('/subscribe', methods=['POST'])
+@csrf.exempt
 @login_required
 def subscribe():
     """Create Stripe Checkout Session or local trial when Stripe is not configured."""

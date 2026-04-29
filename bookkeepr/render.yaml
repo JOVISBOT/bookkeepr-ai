@@ -25,6 +25,25 @@ services:
         value: INFO
       - key: APP_NAME
         value: BookKeepr AI
+      - key: APP_URL
+        value: https://bookkeepr-ai.onrender.com
+      - key: SUPPORT_EMAIL
+        value: support@bookkeepr.ai
+      # Stripe — set in Render dashboard (DO NOT commit values)
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # SendGrid — set in Render dashboard
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        value: noreply@bookkeepr.ai
+      # Anthropic AI — set in Render dashboard
+      - key: ANTHROPIC_API_KEY
+        sync: false
 
 databases:
   - name: bookkeepr-db
