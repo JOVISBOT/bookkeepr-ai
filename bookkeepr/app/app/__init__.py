@@ -34,6 +34,7 @@ def create_app(config_name='default'):
     from app.routes.mfa import bp as mfa_bp
     from app.routes.imports import bp as imports_bp
     from app.routes.portal import bp as portal_bp
+    from app.routes.copilot import bp as copilot_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -55,10 +56,11 @@ def create_app(config_name='default'):
     app.register_blueprint(mfa_bp, url_prefix='/auth')
     app.register_blueprint(imports_bp, url_prefix='/dashboard/imports')
     app.register_blueprint(portal_bp)
+    app.register_blueprint(copilot_bp)
 
     # Exempt JSON/API blueprints from CSRF (they use session/token auth, not form tokens)
     from extensions import csrf
-    for _bp in (api_bp, reconciliation_bp, ai_bp, ai_enhanced_bp, quickbooks_bp):
+    for _bp in (api_bp, reconciliation_bp, ai_bp, ai_enhanced_bp, quickbooks_bp, copilot_bp):
         csrf.exempt(_bp)
     
     # Register catch-all route for React frontend (after all API routes)

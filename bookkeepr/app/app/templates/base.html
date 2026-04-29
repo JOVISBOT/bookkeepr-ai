@@ -224,7 +224,11 @@
     
     <!-- Initialize Lucide Icons -->
     <script>lucide.createIcons();</script>
-    
+
+    {% if current_user.is_authenticated %}
+    {% include 'copilot_widget.html' %}
+    {% endif %}
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

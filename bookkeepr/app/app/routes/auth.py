@@ -159,16 +159,63 @@ def register():
         except Exception as _e:
             current_app.logger.warning('Welcome email failed: %s', _e)
 
-        flash(f'Account created! Welcome, {first_name}. Your 14-day trial has started.', 'success')
+        # Send email confirmation link (non-blocking)
+        try:
+            token = _get_serializer(salt='email-confirm').dumps(user.id)
+            confirm_url = url_for('auth.confirm_email', token=token, _external=True)
+            from app.services.email_service import send_email
+            send_email(
+                to=user.email,
+                subject=f'Confirm your {current_app.config.get("APP_NAME", "BookKeepr AI")} account',
+                html=f'''<p>Hi {first_name},</p>
+<p>Thanks for signing up! Please confirm your email address by clicking the link below:</p>
+<p><a href="{confirm_url}">Confirm Email</a></p>
+<p>If you did not create an account, please ignore this email.</p>''',
+            )
+        except Exception as _e:
+            current_app.logger.warning('Confirmation email failed: %s', _e)
+
+        flash(f'Account created! Welcome, {first_name}. Please check your email to confirm your account. Your 14-day trial has started.', 'success')
         return redirect(url_for('auth.login'))
     
     return render_template('auth/register.html')
 
 
-def _get_serializer():
+def _get_serializer(salt='pw-reset'):
     from itsdangerous import URLSafeTimedSerializer
     from flask import current_app
-    return URLSafeTimedSerializer(current_app.config['SECRET_KEY'], salt='pw-reset')
+    return URLSafeTimedSerializer(current_app.config['SECRET_KEY'], salt=salt)
+
+
+@bp.route('/confirm-email/<token>')
+def confirm_email(token):
+    """Confirm email address using a signed token (24h expiry)."""
+    from itsdangerous import BadSignature, SignatureExpired
+    from app.models.user import User
+    from extensions import db
+
+    try:
+        user_id = _get_serializer(salt='email-confirm').loads(token, max_age=86400)
+    except SignatureExpired:
+        flash('This confirmation link has expired. Please contact support.', 'error')
+        return redirect(url_for('main.index'))
+    except BadSignature:
+        flash('Invalid confirmation link.', 'error')
+        return redirect(url_for('main.index'))
+
+    user = User.query.get(user_id)
+    if not user:
+        flash('User not found.', 'error')
+        return redirect(url_for('main.index'))
+
+    if user.email_verified:
+        flash('Email already confirmed. You can log in.', 'info')
+    else:
+        user.email_verified = True
+        db.session.commit()
+        flash('Email confirmed! You can now log in.', 'success')
+
+    return redirect(url_for('auth.login'))
 
 
 @bp.route('/forgot-password', methods=['GET', 'POST'])

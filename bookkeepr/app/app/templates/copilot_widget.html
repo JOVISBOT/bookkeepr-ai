@@ -1,0 +1,162 @@
+<!-- BookKeepr AI Copilot Chat Widget -->
+<div id="copilotWidget" class="fixed bottom-6 right-6 z-50">
+  <!-- Toggle Button -->
+  <button id="copilotToggle"
+          class="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center"
+          onclick="toggleCopilot()">
+    <i data-lucide="bot" class="h-7 w-7" id="copilotIcon"></i>
+  </button>
+
+  <!-- Chat Panel -->
+  <div id="copilotPanel" class="hidden absolute bottom-16 right-0 w-[380px] h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="bg-blue-600 text-white px-4 py-3 flex items-center gap-2 shrink-0">
+      <i data-lucide="sparkles" class="h-5 w-5"></i>
+      <span class="font-semibold">BookKeepr Copilot</span>
+      <button onclick="toggleCopilot()" class="ml-auto text-white/80 hover:text-white">
+        <i data-lucide="x" class="h-4 w-4"></i>
+      </button>
+    </div>
+
+    <!-- Messages -->
+    <div id="copilotMessages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 text-sm">
+      <div class="flex items-start gap-2">
+        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+          <i data-lucide="bot" class="h-4 w-4"></i>
+        </div>
+        <div class="bg-white rounded-2xl rounded-tl-sm px-3.5 py-2.5 shadow-sm text-gray-700 max-w-[85%]">
+          Hi! I'm your BookKeepr Copilot. I can help you classify transactions, run reports, approve items, and more. What can I do for you?
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="border-t border-gray-200 p-3 shrink-0 bg-white">
+      <form id="copilotForm" onsubmit="sendCopilotMessage(event)" class="flex gap-2">
+        <input id="copilotInput" type="text" placeholder="Ask me anything…"
+               class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               autocomplete="off">
+        <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors shrink-0">
+          <i data-lucide="send" class="h-4 w-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+let copilotHistory = [];
+let copilotLoading = false;
+
+function toggleCopilot() {
+  const panel = document.getElementById('copilotPanel');
+  const icon = document.getElementById('copilotIcon');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) {
+    icon.setAttribute('data-lucide', 'x');
+    document.getElementById('copilotInput').focus();
+  } else {
+    icon.setAttribute('data-lucide', 'bot');
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function addCopilotMsg(text, isUser) {
+  const container = document.getElementById('copilotMessages');
+  const div = document.createElement('div');
+  div.className = isUser ? 'flex items-start gap-2 justify-end' : 'flex items-start gap-2';
+  if (isUser) {
+    div.innerHTML = `
+      <div class="bg-blue-600 text-white rounded-2xl rounded-tr-sm px-3.5 py-2.5 shadow-sm max-w-[85%]">${text}</div>
+      <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+        <i data-lucide="user" class="h-4 w-4"></i>
+      </div>`;
+  } else {
+    div.innerHTML = `
+      <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+        <i data-lucide="bot" class="h-4 w-4"></i>
+      </div>
+      <div class="bg-white rounded-2xl rounded-tl-sm px-3.5 py-2.5 shadow-sm text-gray-700 max-w-[85%]">${text}</div>`;
+  }
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  if (window.lucide) lucide.createIcons();
+}
+
+function showCopilotTyping() {
+  const container = document.getElementById('copilotMessages');
+  const div = document.createElement('div');
+  div.id = 'copilotTyping';
+  div.className = 'flex items-start gap-2';
+  div.innerHTML = `
+    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+      <i data-lucide="bot" class="h-4 w-4"></i>
+    </div>
+    <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+      <div class="flex gap-1.5">
+        <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0ms"></span>
+        <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay:150ms"></span>
+        <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay:300ms"></span>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  if (window.lucide) lucide.createIcons();
+}
+
+function removeCopilotTyping() {
+  const el = document.getElementById('copilotTyping');
+  if (el) el.remove();
+}
+
+async function sendCopilotMessage(event) {
+  event.preventDefault();
+  if (copilotLoading) return;
+  const input = document.getElementById('copilotInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  addCopilotMsg(escapeHtml(msg), true);
+  copilotHistory.push({role: 'user', content: msg});
+  showCopilotTyping();
+  copilotLoading = true;
+
+  try {
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const headers = {'Content-Type': 'application/json'};
+    if (csrfMeta) headers['X-CSRFToken'] = csrfMeta.content;
+
+    const r = await fetch('/api/copilot', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({message: msg, history: copilotHistory}),
+    });
+    const data = await r.json();
+    removeCopilotTyping();
+
+    if (data.success && data.reply) {
+      addCopilotMsg(escapeHtml(data.reply), false);
+      copilotHistory.push({role: 'assistant', content: data.reply});
+    } else {
+      addCopilotMsg('Sorry, I had trouble with that. Please try again.', false);
+    }
+  } catch (e) {
+    removeCopilotTyping();
+    addCopilotMsg('Network error — check your connection and try again.', false);
+  }
+  copilotLoading = false;
+}
+
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+</script>
+<style>
+#copilotMessages::-webkit-scrollbar { width: 4px; }
+#copilotMessages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+@keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.animate-bounce { animation: bounce 0.6s infinite; }
+</style>

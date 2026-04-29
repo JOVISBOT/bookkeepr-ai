@@ -44,6 +44,20 @@ services:
       # Anthropic AI — set in Render dashboard
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Groq AI (for Copilot) — set in Render dashboard
+      - key: GROQ_API_KEY
+        sync: false
+      # QuickBooks OAuth (production keys)
+      - key: INTUIT_CLIENT_ID
+        sync: false
+      - key: INTUIT_CLIENT_SECRET
+        sync: false
+      - key: INTUIT_SANDBOX_MODE
+        value: "false"
+      - key: INTUIT_ENVIRONMENT
+        value: production
+      - key: INTUIT_REDIRECT_URI
+        value: https://bookkeepr-ai.onrender.com/quickbooks/callback
 
 databases:
   - name: bookkeepr-db
