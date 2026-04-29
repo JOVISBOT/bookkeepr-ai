@@ -21,6 +21,30 @@ def reports_dashboard():
     return render_template('dashboard/reports.html')
 
 
+@bp.route('/dashboard/reports/data')
+@login_required
+def reports_data():
+    """JSON endpoint: aggregate report data for the reports dashboard."""
+    company = get_company()
+    if not company:
+        return jsonify({'error': 'No company found'}), 404
+
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    pnl = generate_pnl_data(start_date, end_date)
+    balance = generate_balance_data(end_date)
+    cashflow = generate_cashflow_data('monthly', start_date, end_date)
+
+    return jsonify({
+        'success': True,
+        'pnl': pnl,
+        'balance_sheet': balance,
+        'cash_flow': cashflow,
+        'generated_at': datetime.now().isoformat(),
+    })
+
+
 # ============================================================================
 # API ENDPOINTS - LIVE FINANCIAL REPORTS
 # ============================================================================

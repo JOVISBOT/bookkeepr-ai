@@ -5,10 +5,10 @@ from extensions import db
 from app.models import User, AuditLog
 from app.services.mfa_service import generate_secret, generate_qr_code, verify_token
 
-bp = Blueprint('mfa', __name__, url_prefix='/mfa')
+bp = Blueprint('mfa', __name__)
 
 
-@bp.route('/setup', methods=['GET', 'POST'])
+@bp.route('/mfa-setup', methods=['GET', 'POST'])
 @login_required
 def setup():
     """Setup MFA - show QR code for Google Authenticator"""

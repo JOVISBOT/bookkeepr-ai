@@ -16,10 +16,10 @@
           <button id="aiCategorizeBtn" onclick="triggerAICategorize()" class="bk-btn-secondary">
             <i data-lucide="sparkles" class="h-4 w-4"></i> AI Categorize All
           </button>
-          <button class="bk-btn-secondary" onclick="window.location.href='/review'">
+          <button class="bk-btn-secondary" onclick="window.location.href='/dashboard/review'">
             <i data-lucide="list-checks" class="h-4 w-4"></i> Review Queue
           </button>
-          <button class="bk-btn-primary" onclick="window.location.href='/imports/csv'">
+          <button class="bk-btn-primary" onclick="window.location.href='/dashboard/imports/csv'">
             <i data-lucide="upload" class="h-4 w-4"></i> Import CSV
           </button>
         </div>
@@ -50,16 +50,44 @@
 
     <!-- Filter Bar -->
     <div class="bk-card mb-4">
+      <!-- Category Filter Tabs -->
+      <div class="flex flex-wrap items-center gap-2 mb-3 px-1">
+        <span class="text-sm font-semibold text-gray-700 mr-1">Category:</span>
+        <a href="{{ url_for('dashboard.transactions') }}"
+           class="px-3 py-1.5 text-sm rounded-full transition-colors
+           {% if not request.args.get('category') %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+          All
+        </a>
+        <a href="{{ url_for('dashboard.transactions', category='categorized') }}"
+           class="px-3 py-1.5 text-sm rounded-full transition-colors
+           {% if request.args.get('category') == 'categorized' %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+            Categorized
+          </span>
+        </a>
+        <a href="{{ url_for('dashboard.transactions', category='suggested') }}"
+           class="px-3 py-1.5 text-sm rounded-full transition-colors
+           {% if request.args.get('category') == 'suggested' %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-yellow-500 inline-block"></span>
+            Needs Review
+          </span>
+        </a>
+        <a href="{{ url_for('dashboard.transactions', category='uncategorized') }}"
+           class="px-3 py-1.5 text-sm rounded-full transition-colors
+           {% if request.args.get('category') == 'uncategorized' %}bg-blue-600 text-white shadow-sm{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+            Uncategorized
+          </span>
+        </a>
+      </div>
+
       <form method="GET" class="flex flex-wrap items-center gap-3">
         <h2 class="text-base font-semibold text-gray-900 mr-auto">All Transactions</h2>
         <input type="text" name="search" placeholder="Search description…" class="bk-input min-w-[200px]"
                value="{{ request.args.get('search', '') }}">
-        <select name="category" class="bk-input">
-          <option value="">All Categories</option>
-          <option value="uncategorized" {% if request.args.get('category')=='uncategorized' %}selected{% endif %}>Uncategorized</option>
-          <option value="suggested"     {% if request.args.get('category')=='suggested'     %}selected{% endif %}>Needs Review</option>
-          <option value="categorized"   {% if request.args.get('category')=='categorized'   %}selected{% endif %}>Categorized</option>
-        </select>
         <select name="status" class="bk-input">
           <option value="">All Status</option>
           <option value="needs_review" {% if request.args.get('status')=='needs_review' %}selected{% endif %}>Pending</option>
@@ -202,7 +230,7 @@
                 <p class="text-gray-700 font-medium mb-1">No transactions found</p>
                 <p class="text-gray-500 text-sm mb-4">Try clearing filters, or import a CSV to get started</p>
                 <div class="flex gap-2 justify-center">
-                  <button class="bk-btn-primary" onclick="window.location.href='/imports/csv'">
+                  <button class="bk-btn-primary" onclick="window.location.href='/dashboard/imports/csv'">
                     <i data-lucide="upload" class="h-4 w-4"></i> Upload CSV
                   </button>
                   <button class="bk-btn-secondary" onclick="window.location.href='/quickbooks/connect'">

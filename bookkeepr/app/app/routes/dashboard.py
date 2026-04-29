@@ -7,7 +7,7 @@ from app.models.company import Company
 from app.models.transaction import Transaction
 from app.models.account import Account
 from app.models.subscription import UserSubscription
-from extensions import db
+from extensions import db, csrf
 
 bp = Blueprint('dashboard', __name__)
 
@@ -142,6 +142,8 @@ def transactions():
         category_filter = request.args.get('category', '').strip()
         if category_filter == 'uncategorized':
             q = q.filter_by(categorization_status='uncategorized')
+        elif category_filter == 'suggested':
+            q = q.filter_by(categorization_status='suggested')
         elif category_filter == 'categorized':
             q = q.filter(Transaction.categorization_status != 'uncategorized')
         
@@ -157,7 +159,10 @@ def transactions():
     return render_template('dashboard/transactions.html',
                            transactions=transactions_list,
                            total=total,
-                           company=company)
+                           company=company,
+                           gaap_accounts=Account.query.filter_by(
+                               company_id=company.id, is_active=True
+                           ).order_by(Account.account_number, Account.name).all() if company else [])
 
 
 @bp.route('/transactions/<int:transaction_id>')
@@ -219,11 +224,12 @@ def company_settings():
 
 
 @bp.route('/ai-categorize', methods=['POST'])
+@csrf.exempt
 @login_required
 def ai_categorize():
     """AJAX endpoint: run GAAP categorization on all uncategorized/suggested transactions."""
-    from app.services.gaap_coa import categorize_by_gaap
     from app.models.transaction import Transaction
+    from app.services.local_classifier import classify as local_classify
     from extensions import db
 
     company = Company.query.filter_by(user_id=current_user.id).first()
@@ -236,7 +242,6 @@ def ai_categorize():
     ).all()
 
     updated = 0
-    from app.services.local_classifier import classify as local_classify
     for txn in txns:
         result = local_classify(txn.description or '', txn.vendor_name or '', float(txn.amount or 0), company.id)
         label = result['category']
@@ -259,13 +264,15 @@ def ai_categorize():
     return jsonify({'success': True, 'updated': updated})
 
 
+@bp.route('/bulk-approve', methods=['POST'])
 @bp.route('/transactions/bulk-approve', methods=['POST'])
+@csrf.exempt
 @login_required
 def bulk_approve():
     from flask import request as req
     from datetime import datetime
     data = req.get_json(force=True) or {}
-    ids = data.get('ids', [])
+    ids = data.get('transaction_ids') or data.get('ids', [])
     if not ids:
         return jsonify({'success': False, 'error': 'No IDs provided'}), 400
 

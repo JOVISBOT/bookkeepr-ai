@@ -47,13 +47,13 @@ def create_app(config_name='default'):
     # Reports blueprint handles both /dashboard/reports and /api/v1/reports/*
     app.register_blueprint(ai_bp, url_prefix='/api/v1/ai')
     app.register_blueprint(pricing_bp)
-    app.register_blueprint(review_bp)
+    app.register_blueprint(review_bp, url_prefix='/dashboard')
     app.register_blueprint(admin_bp)
     app.register_blueprint(ai_enhanced_bp, url_prefix='/api/v1/ai')
     app.register_blueprint(banks_bp)
-    app.register_blueprint(clients_bp)
-    app.register_blueprint(mfa_bp)
-    app.register_blueprint(imports_bp)
+    app.register_blueprint(clients_bp, url_prefix='/dashboard/clients')
+    app.register_blueprint(mfa_bp, url_prefix='/auth')
+    app.register_blueprint(imports_bp, url_prefix='/dashboard/imports')
     app.register_blueprint(portal_bp)
 
     # Exempt JSON/API blueprints from CSRF (they use session/token auth, not form tokens)
